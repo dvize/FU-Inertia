@@ -75,9 +75,9 @@ namespace dvize.BulletTime
                     var player = Singleton<GameWorld>.Instance.AllPlayers[0];
 
 
-                    player.Physical.Inertia = 0f;
-                    player.Physical.MoveDiagonalInertia = 0f;
-                    player.Physical.MoveSideInertia = 0f;
+                    player.Physical.Inertia = Plugin.Inertia.Value;
+                    player.Physical.MoveDiagonalInertia = Plugin.MoveDiagonalInertia.Value;
+                    player.Physical.MoveSideInertia = Plugin.MoveSideInertia.Value;
 
                 }
                 
