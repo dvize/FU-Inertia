@@ -17,11 +17,12 @@ using UnityEngine;
 
 namespace dvize.BulletTime
 {
-    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "1.0.0")]
+    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "1.1.0")]
 
     public class Plugin : BaseUnityPlugin
     {
         public static ConfigEntry<bool> PluginEnabled;
+        public static ConfigEntry<Vector3> baseInertia;
         public static ConfigEntry<float> Inertia;
         public static ConfigEntry<float> MoveDiagonalInertia;
         public static ConfigEntry<float> MoveSideInertia;
@@ -34,6 +35,12 @@ namespace dvize.BulletTime
                 "Plugin on/off",
                 true,
                 "");
+
+            baseInertia = Config.Bind(
+                "Main Settings",
+                "Base Inertia",
+                Vector3.zero,
+                "Set inertia base limits. Think this is related to weight on your person");
 
             Inertia = Config.Bind(
                 "Main Settings",
@@ -78,6 +85,7 @@ namespace dvize.BulletTime
                     player.Physical.Inertia = Plugin.Inertia.Value;
                     player.Physical.MoveDiagonalInertia = Plugin.MoveDiagonalInertia.Value;
                     player.Physical.MoveSideInertia = Plugin.MoveSideInertia.Value;
+                    player.Physical.BaseInertiaLimits = Plugin.baseInertia.Value;
 
                 }
                 
