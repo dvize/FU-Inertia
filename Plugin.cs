@@ -17,7 +17,7 @@ using UnityEngine;
 
 namespace dvize.BulletTime
 {
-    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "1.1.0")]
+    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "1.2.0")]
 
     public class Plugin : BaseUnityPlugin
     {
@@ -27,7 +27,18 @@ namespace dvize.BulletTime
         public static ConfigEntry<float> MoveDiagonalInertia;
         public static ConfigEntry<float> MoveSideInertia;
 
+        public static ConfigEntry<Vector3> InertialLimits;
+        public static ConfigEntry<float>   InertialLimitsStep;
+        public static ConfigEntry<Vector2> SprintSpeedInertiaCurveMax;
+        public static ConfigEntry<Vector2> SprintBrakeInertia;
+        public static ConfigEntry<Vector2> SprintTransitionMotionPreservation;
+        public static ConfigEntry<Vector2> WalkInertia;
+        public static ConfigEntry<Vector2> SpeedInertiaAfterJump;
+        public static ConfigEntry<Vector2> TiltInertiaMaxSpeed;
+        public static ConfigEntry<Vector2> SideTime;
+        public static ConfigEntry<Vector2> InertiaBackwardsCoefficient;
 
+        public static ConfigEntry<float> StrafeInertionCoefficient;
         async void Awake()
         {
             PluginEnabled = Config.Bind(
@@ -59,6 +70,72 @@ namespace dvize.BulletTime
                 "Move Side Inertia",
                 0f,
                 "Set inertia for moving sideways");
+
+            InertialLimits = Config.Bind(
+                "Main Settings",
+                "Inertial Limits",
+                Vector3.zero,
+                "Global Settings inertial limits?");
+
+            InertialLimitsStep = Config.Bind(
+                "Main Settings",
+                "Inertial Limits Step",
+                0f,
+                "Global Settings.. No clue");
+
+            SprintSpeedInertiaCurveMax = Config.Bind(
+                "Main Settings",
+                "Sprint Speed Inertia Curve Max",
+                Vector2.zero,
+                "Global Settings Sprint Speed Inertia Curve Max");
+
+            SprintBrakeInertia = Config.Bind(
+                "Main Settings",
+                "Sprint Brake Inertia",
+                Vector2.zero,
+                "Global Settings Sprint Brake Inertia");
+
+            SprintTransitionMotionPreservation = Config.Bind(
+                "Main Settings",
+                "Sprint Transition Motion Preservation",
+                Vector2.zero,
+                "Global Settings..no idea");
+
+            WalkInertia = Config.Bind(
+                "Main Settings",
+                "Walk Inertia",
+                Vector2.zero,
+                "Global Settings..Walk Inertia");
+
+            SpeedInertiaAfterJump = Config.Bind(
+                "Main Settings",
+                "Speed Inertia After Jump",
+                Vector2.zero,
+                "Global Settings..Inertia After Jump");
+
+            TiltInertiaMaxSpeed = Config.Bind(
+                "Main Settings",
+                "Tilt Inertia Max Speed",
+                Vector2.zero,
+                "Global Settings..Tilt Inertia Max Speed");
+
+            SideTime = Config.Bind(
+                "Main Settings",
+                "Side Time",
+                Vector2.zero,
+                "Global Settings..Side Time");
+
+            InertiaBackwardsCoefficient = Config.Bind(
+                "Main Settings",
+                "Inertia Backwards Coefficent",
+                Vector2.zero,
+                "Global Settings..I don't know");
+
+            StrafeInertionCoefficient = Config.Bind(
+                "Main Settings",
+                "Strafe Inertion Coeffecient",
+                -5f,
+                "EFT Hard Settings..hopefully strafe inertia");
         }
 
         
@@ -87,6 +164,21 @@ namespace dvize.BulletTime
                     player.Physical.MoveSideInertia = Plugin.MoveSideInertia.Value;
                     player.Physical.BaseInertiaLimits = Plugin.baseInertia.Value;
 
+                    var playeradditional = Singleton<GClass1162.GClass1217>.Instance;
+                    playeradditional.InertiaLimits = Plugin.InertialLimits.Value;
+                    playeradditional.SprintBrakeInertia = Plugin.SprintBrakeInertia.Value;
+                    playeradditional.WalkInertia = Plugin.WalkInertia.Value;
+                    playeradditional.InertiaLimitsStep = Plugin.InertialLimitsStep.Value;
+                    playeradditional.SpeedInertiaAfterJump = Plugin.SpeedInertiaAfterJump.Value;
+                    playeradditional.TiltInertiaMaxSpeed = Plugin.TiltInertiaMaxSpeed.Value;
+                    playeradditional.SideTime = Plugin.SideTime.Value;
+                    playeradditional.SprintSpeedInertiaCurveMax = Plugin.SprintSpeedInertiaCurveMax.Value;
+                    playeradditional.SprintTransitionMotionPreservation = Plugin.SprintTransitionMotionPreservation.Value;
+                    playeradditional.InertiaBackwardCoef = Plugin.InertiaBackwardsCoefficient.Value;
+
+                    EFTHardSettings settings = Singleton<EFTHardSettings>.Instance;
+
+                    settings.StrafeInertionCoefficient = Plugin.StrafeInertionCoefficient.Value;
                 }
                 
                 
