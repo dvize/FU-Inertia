@@ -45,6 +45,9 @@
     <Reference Include="Assembly-CSharp">
       <HintPath>..\..\References\Assembly-CSharp.dll</HintPath>
     </Reference>
+    <Reference Include="Assembly-CSharp-firstpass">
+      <HintPath>..\..\References\Assembly-CSharp-firstpass.dll</HintPath>
+    </Reference>
     <Reference Include="BepInEx">
       <HintPath>..\..\References\BepInEx.dll</HintPath>
     </Reference>
