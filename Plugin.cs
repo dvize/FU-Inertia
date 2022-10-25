@@ -17,7 +17,7 @@ using UnityEngine;
 
 namespace dvize.BulletTime
 {
-    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "1.2.0")]
+    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "1.3.0")]
 
     public class Plugin : BaseUnityPlugin
     {
@@ -26,7 +26,6 @@ namespace dvize.BulletTime
         public static ConfigEntry<float> Inertia;
         public static ConfigEntry<float> MoveDiagonalInertia;
         public static ConfigEntry<float> MoveSideInertia;
-
         public static ConfigEntry<Vector3> InertialLimits;
         public static ConfigEntry<float>   InertialLimitsStep;
         public static ConfigEntry<Vector2> SprintSpeedInertiaCurveMax;
@@ -37,7 +36,6 @@ namespace dvize.BulletTime
         public static ConfigEntry<Vector2> TiltInertiaMaxSpeed;
         public static ConfigEntry<Vector2> SideTime;
         public static ConfigEntry<Vector2> InertiaBackwardsCoefficient;
-
         public static ConfigEntry<float> StrafeInertionCoefficient;
         async void Awake()
         {
@@ -164,7 +162,7 @@ namespace dvize.BulletTime
                     player.Physical.MoveSideInertia = Plugin.MoveSideInertia.Value;
                     player.Physical.BaseInertiaLimits = Plugin.baseInertia.Value;
 
-                    var playeradditional = Singleton<GClass1162.GClass1217>.Instance;
+                    var playeradditional = Singleton<GClass1168.GClass1223>.Instance;
                     playeradditional.InertiaLimits = Plugin.InertialLimits.Value;
                     playeradditional.SprintBrakeInertia = Plugin.SprintBrakeInertia.Value;
                     playeradditional.WalkInertia = Plugin.WalkInertia.Value;
