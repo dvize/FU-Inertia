@@ -16,9 +16,10 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using UnityEngine;
 
+
 namespace dvize.BulletTime
 {
-    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "1.4.0")]
+    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "1.5.0")]
 
     public class Plugin : BaseUnityPlugin
     {
@@ -68,6 +69,7 @@ namespace dvize.BulletTime
         public static ConfigEntry<float> tiltchangingspeed;
         public static ConfigEntry<float> bodygravity;
         public static ConfigEntry<float> effectorlinkweight;
+        
 
         async void Awake()
         {
@@ -365,78 +367,83 @@ namespace dvize.BulletTime
                     return;
                 }
 
-                if (Singleton<GameWorld>.Instance.AllPlayers[0].IsYourPlayer)
+                try
                 {
-                    var player = Singleton<GameWorld>.Instance.AllPlayers[0];
-                    player.Physical.Inertia = Plugin.Inertia.Value;
-                    player.Physical.MoveDiagonalInertia = Plugin.MoveDiagonalInertia.Value;
-                    player.Physical.MoveSideInertia = Plugin.MoveSideInertia.Value;
-                    player.Physical.BaseInertiaLimits = Plugin.baseInertia.Value;
-
-                    var playeradditional = Singleton<GClass1168.GClass1223>.Instance;
-                    playeradditional.DurationPower = Plugin.DurationPower.Value;
-                    playeradditional.PenaltyPower = Plugin.PenaltyPower.Value;
-                    playeradditional.BaseJumpPenalty = Plugin.BaseJumpPenalty.Value;
-                    playeradditional.BaseJumpPenaltyDuration = Plugin.BaseJumpPenalty.Value;
-                    playeradditional.InertiaLimits = Plugin.InertiaLimits.Value;
-                    playeradditional.SprintBrakeInertia = Plugin.SprintBrakeInertia.Value;
-                    playeradditional.WalkInertia = Plugin.WalkInertia.Value;
-                    playeradditional.InertiaLimitsStep = Plugin.InertialLimitsStep.Value;
-                    playeradditional.SpeedInertiaAfterJump = Plugin.SpeedInertiaAfterJump.Value;
-                    playeradditional.TiltStartSideBackSpeed = Plugin.TiltStartSideBackSpeed.Value;
-                    playeradditional.TiltMaxSideBackSpeed = Plugin.TiltStartSideBackSpeed.Value;
-                    playeradditional.TiltAcceleration = Plugin.TiltAcceleration.Value;
-                    playeradditional.InertiaTiltCurveMin = Plugin.InertiaTiltCurveMin.Value;
-                    playeradditional.TiltInertiaMaxSpeed = Plugin.TiltInertiaMaxSpeed.Value;
-                    playeradditional.SideTime = Plugin.SideTime.Value;
-                    playeradditional.SprintSpeedInertiaCurveMin = Plugin.SprintSpeedInertiaCurveMin.Value;
-                    playeradditional.SprintSpeedInertiaCurveMax = Plugin.SprintSpeedInertiaCurveMax.Value;
-                    playeradditional.SprintTransitionMotionPreservation = Plugin.SprintTransitionMotionPreservation.Value;
-                    playeradditional.InertiaBackwardCoef = Plugin.InertiaBackwardsCoefficient.Value;
-                    playeradditional.ExitMovementStateSpeedThreshold = Plugin.ExitMovementStateSpeedThreshold.Value;
-                    playeradditional.SpeedLimitDurationMin = Plugin.SpeedLimitDurationMin.Value;
-                    playeradditional.SpeedLimitDurationMax = Plugin.SpeedLimitDurationMax.Value;
-                    playeradditional.SprintTransitionMotionPreservation = Plugin.SprintTransitionMotionPreservation.Value;
-                    playeradditional.SprintAccelerationLimits = Plugin.SprintAccelerationLimits.Value;
-                    playeradditional.PreSprintAccelerationLimits = Plugin.PreSprintAccelerationLimits.Value;
-                    playeradditional.DiagonalTime = Plugin.DiagonalTime.Value;
-                    playeradditional.MinDirectionBlendTime = Plugin.MinDirectionBlendTime.Value;
-                    playeradditional.MoveTimeRange = Plugin.MoveTimeRange.Value;
-                    playeradditional.SuddenChangesSmoothness = Plugin.SuddenChangesSmoothness.Value;
-                    playeradditional.MaxTimeWithoutInput = Plugin.MaxTimeWithoutInput.Value;
-                    playeradditional.ProneDirectionAccelerationRange = Plugin.ProneDirectionAccelerationRange.Value;
-                    playeradditional.ProneSpeedAccelerationRange = Plugin.ProneSpeedAccelerationRange.Value;
-                    playeradditional.DiagonalStayTimeRange = Plugin.DiagonalStayTimeRange.Value;
-                    playeradditional.CrouchSpeedAccelerationRange = Plugin.CrouchSpeedAccelerationRange.Value;
-                    playeradditional.WeaponFlipSpeed = Plugin.WeaponFlipSpeed.Value;
-
-                    EFTHardSettings settings = Singleton<EFTHardSettings>.Instance;
-                    settings.StrafeInertionCoefficient = Plugin.StrafeInertionCoefficient.Value;
-                    settings.TILT_CHANGING_SPEED = Plugin.tiltchangingspeed.Value;
-
-                    RootMotion.FinalIK.Inertia inertiaIK = Singleton<Inertia>.Instance;
-                    RootMotion.FinalIK.BodyTilt bodytilt = Singleton<BodyTilt>.Instance;
-                    
-                    bodytilt.tiltSpeed = Plugin.tiltSpeed.Value; 
-                    bodytilt.tiltSensitivity = Plugin.tiltSensitivity.Value; 
-                   
-                    foreach (Inertia.Body body in inertiaIK.bodies)
+                    if (Singleton<GameWorld>.Instance.AllPlayers[0].IsYourPlayer)
                     {
-                        body.transform.position = new Vector3(0f, 0f, 0f);
-                        body.transform.localPosition = new Vector3(0f, 0f, 0f);
-                        body.gravity = Plugin.bodygravity.Value;
+                        var player = Singleton<GameWorld>.Instance.AllPlayers[0];
+                        player.Physical.Inertia = Plugin.Inertia.Value;
+                        player.Physical.MoveDiagonalInertia = Plugin.MoveDiagonalInertia.Value;
+                        player.Physical.MoveSideInertia = Plugin.MoveSideInertia.Value;
+                        player.Physical.BaseInertiaLimits = Plugin.baseInertia.Value;
 
-                        foreach(Inertia.Body.EffectorLink effectorlink in body.effectorLinks)
+                        var playeradditional = Singleton<GClass1173.GClass1228>.Instance;
+                        playeradditional.DurationPower = Plugin.DurationPower.Value;
+                        playeradditional.PenaltyPower = Plugin.PenaltyPower.Value;
+                        playeradditional.BaseJumpPenalty = Plugin.BaseJumpPenalty.Value;
+                        playeradditional.BaseJumpPenaltyDuration = Plugin.BaseJumpPenalty.Value;
+                        playeradditional.InertiaLimits = Plugin.InertiaLimits.Value;
+                        playeradditional.SprintBrakeInertia = Plugin.SprintBrakeInertia.Value;
+                        playeradditional.WalkInertia = Plugin.WalkInertia.Value;
+                        playeradditional.InertiaLimitsStep = Plugin.InertialLimitsStep.Value;
+                        playeradditional.SpeedInertiaAfterJump = Plugin.SpeedInertiaAfterJump.Value;
+                        playeradditional.TiltStartSideBackSpeed = Plugin.TiltStartSideBackSpeed.Value;
+                        playeradditional.TiltMaxSideBackSpeed = Plugin.TiltStartSideBackSpeed.Value;
+                        playeradditional.TiltAcceleration = Plugin.TiltAcceleration.Value;
+                        playeradditional.InertiaTiltCurveMin = Plugin.InertiaTiltCurveMin.Value;
+                        playeradditional.TiltInertiaMaxSpeed = Plugin.TiltInertiaMaxSpeed.Value;
+                        playeradditional.SideTime = Plugin.SideTime.Value;
+                        playeradditional.SprintSpeedInertiaCurveMin = Plugin.SprintSpeedInertiaCurveMin.Value;
+                        playeradditional.SprintSpeedInertiaCurveMax = Plugin.SprintSpeedInertiaCurveMax.Value;
+                        playeradditional.SprintTransitionMotionPreservation = Plugin.SprintTransitionMotionPreservation.Value;
+                        playeradditional.InertiaBackwardCoef = Plugin.InertiaBackwardsCoefficient.Value;
+                        playeradditional.ExitMovementStateSpeedThreshold = Plugin.ExitMovementStateSpeedThreshold.Value;
+                        playeradditional.SpeedLimitDurationMin = Plugin.SpeedLimitDurationMin.Value;
+                        playeradditional.SpeedLimitDurationMax = Plugin.SpeedLimitDurationMax.Value;
+                        playeradditional.SprintTransitionMotionPreservation = Plugin.SprintTransitionMotionPreservation.Value;
+                        playeradditional.SprintAccelerationLimits = Plugin.SprintAccelerationLimits.Value;
+                        playeradditional.PreSprintAccelerationLimits = Plugin.PreSprintAccelerationLimits.Value;
+                        playeradditional.DiagonalTime = Plugin.DiagonalTime.Value;
+                        playeradditional.MinDirectionBlendTime = Plugin.MinDirectionBlendTime.Value;
+                        playeradditional.MoveTimeRange = Plugin.MoveTimeRange.Value;
+                        playeradditional.SuddenChangesSmoothness = Plugin.SuddenChangesSmoothness.Value;
+                        playeradditional.MaxTimeWithoutInput = Plugin.MaxTimeWithoutInput.Value;
+                        playeradditional.ProneDirectionAccelerationRange = Plugin.ProneDirectionAccelerationRange.Value;
+                        playeradditional.ProneSpeedAccelerationRange = Plugin.ProneSpeedAccelerationRange.Value;
+                        playeradditional.DiagonalStayTimeRange = Plugin.DiagonalStayTimeRange.Value;
+                        playeradditional.CrouchSpeedAccelerationRange = Plugin.CrouchSpeedAccelerationRange.Value;
+                        playeradditional.WeaponFlipSpeed = Plugin.WeaponFlipSpeed.Value;
+
+                        EFTHardSettings settings = Singleton<EFTHardSettings>.Instance;
+                        settings.StrafeInertionCoefficient = Plugin.StrafeInertionCoefficient.Value;
+                        settings.TILT_CHANGING_SPEED = Plugin.tiltchangingspeed.Value;
+
+                        RootMotion.FinalIK.Inertia inertiaIK = Singleton<Inertia>.Instance;
+                        RootMotion.FinalIK.BodyTilt bodytilt = Singleton<BodyTilt>.Instance;
+
+                        bodytilt.tiltSpeed = Plugin.tiltSpeed.Value;
+                        bodytilt.tiltSensitivity = Plugin.tiltSensitivity.Value;
+
+                        foreach (Inertia.Body body in inertiaIK.bodies)
                         {
-                            effectorlink.weight = Plugin.effectorlinkweight.Value;
-                        }
-                    }
+                            body.transform.position = new Vector3(0f, 0f, 0f);
+                            body.transform.localPosition = new Vector3(0f, 0f, 0f);
+                            body.gravity = Plugin.bodygravity.Value;
 
-                    
+                            foreach (Inertia.Body.EffectorLink effectorlink in body.effectorLinks)
+                            {
+                                effectorlink.weight = Plugin.effectorlinkweight.Value;
+                            }
+                        }
+
+
+                    }
+                }
+                catch
+                {
+                    return;
                 }
                 
-                
-
                 
             }
 
