@@ -4,22 +4,13 @@ using BepInEx.Configuration;
 using BepInEx.Logging;
 using Comfort.Common;
 using EFT;
-using EFT.Interactive;
-using EFT.UI;
-using EFT.UI.Health;
 using RootMotion.FinalIK;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 using UnityEngine;
 
 
 namespace dvize.BulletTime
 {
-    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "1.5.0")]
+    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "1.6.0")]
 
     public class Plugin : BaseUnityPlugin
     {
@@ -71,7 +62,7 @@ namespace dvize.BulletTime
         public static ConfigEntry<float> effectorlinkweight;
         
 
-        async void Awake()
+        void Awake()
         {
             PluginEnabled = Config.Bind(
                 "Main Settings",
@@ -377,7 +368,7 @@ namespace dvize.BulletTime
                         player.Physical.MoveSideInertia = Plugin.MoveSideInertia.Value;
                         player.Physical.BaseInertiaLimits = Plugin.baseInertia.Value;
 
-                        var playeradditional = Singleton<GClass1173.GClass1228>.Instance;
+                        var playeradditional = Singleton<BackendConfigSettingsClass.GClass1234>.Instance;
                         playeradditional.DurationPower = Plugin.DurationPower.Value;
                         playeradditional.PenaltyPower = Plugin.PenaltyPower.Value;
                         playeradditional.BaseJumpPenalty = Plugin.BaseJumpPenalty.Value;
