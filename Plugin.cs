@@ -10,7 +10,7 @@ using UnityEngine;
 
 namespace dvize.BulletTime
 {
-    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "1.6.0")]
+    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "1.7.0")]
 
     public class Plugin : BaseUnityPlugin
     {
@@ -60,8 +60,6 @@ namespace dvize.BulletTime
         public static ConfigEntry<float> tiltchangingspeed;
         public static ConfigEntry<float> bodygravity;
         public static ConfigEntry<float> effectorlinkweight;
-        
-
         void Awake()
         {
             PluginEnabled = Config.Bind(
@@ -339,10 +337,9 @@ namespace dvize.BulletTime
                 "tilt changingspeed",
                 1000f,
                 "FinalIK - Default Settings: 10");
+        }
 
-    }
 
-        
         private void FixedUpdate()
         {
             if (Plugin.PluginEnabled.Value)
@@ -358,6 +355,7 @@ namespace dvize.BulletTime
                     return;
                 }
 
+                
                 try
                 {
                     if (Singleton<GameWorld>.Instance.AllPlayers[0].IsYourPlayer)
@@ -368,7 +366,7 @@ namespace dvize.BulletTime
                         player.Physical.MoveSideInertia = Plugin.MoveSideInertia.Value;
                         player.Physical.BaseInertiaLimits = Plugin.baseInertia.Value;
 
-                        var playeradditional = Singleton<BackendConfigSettingsClass.GClass1234>.Instance;
+                        var playeradditional = Singleton<BackendConfigSettingsClass.GClass1323>.Instance;
                         playeradditional.DurationPower = Plugin.DurationPower.Value;
                         playeradditional.PenaltyPower = Plugin.PenaltyPower.Value;
                         playeradditional.BaseJumpPenalty = Plugin.BaseJumpPenalty.Value;
@@ -409,12 +407,16 @@ namespace dvize.BulletTime
                         settings.StrafeInertionCoefficient = Plugin.StrafeInertionCoefficient.Value;
                         settings.TILT_CHANGING_SPEED = Plugin.tiltchangingspeed.Value;
 
+
+
                         RootMotion.FinalIK.Inertia inertiaIK = Singleton<Inertia>.Instance;
                         RootMotion.FinalIK.BodyTilt bodytilt = Singleton<BodyTilt>.Instance;
+                        
 
                         bodytilt.tiltSpeed = Plugin.tiltSpeed.Value;
                         bodytilt.tiltSensitivity = Plugin.tiltSensitivity.Value;
 
+                        
                         foreach (Inertia.Body body in inertiaIK.bodies)
                         {
                             body.transform.position = new Vector3(0f, 0f, 0f);
