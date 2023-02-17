@@ -10,7 +10,7 @@ using UnityEngine;
 
 namespace dvize.BulletTime
 {
-    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "1.7.0")]
+    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "1.8.0")]
 
     public class Plugin : BaseUnityPlugin
     {
@@ -60,6 +60,11 @@ namespace dvize.BulletTime
         public static ConfigEntry<float> tiltchangingspeed;
         public static ConfigEntry<float> bodygravity;
         public static ConfigEntry<float> effectorlinkweight;
+        public static ConfigEntry<bool> RemoveSpeedLimitWeight;
+        public static ConfigEntry<bool> RemoveSpeedLimitSurfaceNormal;
+        public static ConfigEntry<bool> RemoveSpeedLimitArmor;
+        public static ConfigEntry<bool> RemoveSpeedLimitAiming;
+
         void Awake()
         {
             PluginEnabled = Config.Bind(
@@ -337,6 +342,30 @@ namespace dvize.BulletTime
                 "tilt changingspeed",
                 1000f,
                 "FinalIK - Default Settings: 10");
+
+            RemoveSpeedLimitWeight = Config.Bind(
+                "Limiters",
+                "Remove Speed Limit Weight",
+                true,
+                "Default value is off for normal gameplay");
+            
+            RemoveSpeedLimitSurfaceNormal = Config.Bind(
+                "Limiters",
+                "Remove Speed Limit Surface Normal",
+                true,
+                "Default value is off for normal gameplay");
+            
+            RemoveSpeedLimitArmor = Config.Bind(
+                "Limiters",
+                "Remove Speed Limit Armor",
+                true,
+                "Default value is off for normal gameplay");
+            
+            RemoveSpeedLimitAiming = Config.Bind(
+                "Limiters",
+                "Remove Speed Limit Aiming",
+                true,
+                "Default value is off for normal gameplay");
         }
 
 
@@ -360,7 +389,7 @@ namespace dvize.BulletTime
                 {
                     if (Singleton<GameWorld>.Instance.AllPlayers[0].IsYourPlayer)
                     {
-                        var player = Singleton<GameWorld>.Instance.AllPlayers[0];
+                        var player = Singleton<GameWorld>.Instance.MainPlayer;
                         player.Physical.Inertia = Plugin.Inertia.Value;
                         player.Physical.MoveDiagonalInertia = Plugin.MoveDiagonalInertia.Value;
                         player.Physical.MoveSideInertia = Plugin.MoveSideInertia.Value;
@@ -406,10 +435,10 @@ namespace dvize.BulletTime
                         EFTHardSettings settings = Singleton<EFTHardSettings>.Instance;
                         settings.StrafeInertionCoefficient = Plugin.StrafeInertionCoefficient.Value;
                         settings.TILT_CHANGING_SPEED = Plugin.tiltchangingspeed.Value;
+                        settings.StrafeInertionCurve = null;
 
 
-
-                        RootMotion.FinalIK.Inertia inertiaIK = Singleton<Inertia>.Instance;
+        RootMotion.FinalIK.Inertia inertiaIK = Singleton<Inertia>.Instance;
                         RootMotion.FinalIK.BodyTilt bodytilt = Singleton<BodyTilt>.Instance;
                         
 
@@ -429,6 +458,35 @@ namespace dvize.BulletTime
                             }
                         }
 
+                        if (Plugin.RemoveSpeedLimitWeight.Value)
+                        {
+                            player.RemoveStateSpeedLimit(Player.ESpeedLimit.Weight);
+                        }
+
+                        if (Plugin.RemoveSpeedLimitSurfaceNormal.Value)
+                        {
+                            player.RemoveStateSpeedLimit(Player.ESpeedLimit.SurfaceNormal);
+                        }
+
+                        if (Plugin.RemoveSpeedLimitArmor.Value)
+                        {
+                            player.RemoveStateSpeedLimit(Player.ESpeedLimit.Armor);
+                        }
+
+                        if (Plugin.RemoveSpeedLimitAiming.Value)
+                        {
+                            player.RemoveStateSpeedLimit(Player.ESpeedLimit.Aiming);
+                        }
+
+                        //player.RemoveStateSpeedLimit(Player.ESpeedLimit.Weight);
+                        //player.RemoveStateSpeedLimit(Player.ESpeedLimit.Swamp);
+                        //player.RemoveStateSpeedLimit(Player.ESpeedLimit.SurfaceNormal);
+                        //player.RemoveStateSpeedLimit(Player.ESpeedLimit.Shot);
+                        //player.RemoveStateSpeedLimit(Player.ESpeedLimit.HealthCondition);
+                        //player.RemoveStateSpeedLimit(Player.ESpeedLimit.Fall);
+                        //player.RemoveStateSpeedLimit(Player.ESpeedLimit.BarbedWire);
+                        //player.RemoveStateSpeedLimit(Player.ESpeedLimit.Armor);
+                        //player.RemoveStateSpeedLimit(Player.ESpeedLimit.Aiming);
 
                     }
                 }
