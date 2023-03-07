@@ -10,7 +10,7 @@ using UnityEngine;
 
 namespace dvize.BulletTime
 {
-    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "1.8.0")]
+    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "1.9.0")]
 
     public class Plugin : BaseUnityPlugin
     {
@@ -395,7 +395,7 @@ namespace dvize.BulletTime
                         player.Physical.MoveSideInertia = Plugin.MoveSideInertia.Value;
                         player.Physical.BaseInertiaLimits = Plugin.baseInertia.Value;
 
-                        var playeradditional = Singleton<BackendConfigSettingsClass.GClass1323>.Instance;
+                        var playeradditional = Singleton<BackendConfigSettingsClass.GClass1325>.Instance;
                         playeradditional.DurationPower = Plugin.DurationPower.Value;
                         playeradditional.PenaltyPower = Plugin.PenaltyPower.Value;
                         playeradditional.BaseJumpPenalty = Plugin.BaseJumpPenalty.Value;
