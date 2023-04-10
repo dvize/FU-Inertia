@@ -1,16 +1,17 @@
 ﻿using Aki.Reflection.Patching;
+using System.Reflection;
 using BepInEx;
 using BepInEx.Configuration;
-using BepInEx.Logging;
 using Comfort.Common;
 using EFT;
+using HarmonyLib;
 using RootMotion.FinalIK;
 using UnityEngine;
 
 
-namespace dvize.BulletTime
+namespace dvize.FUInertia
 {
-    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "1.9.0")]
+    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "1.9.2")]
 
     public class Plugin : BaseUnityPlugin
     {
@@ -23,7 +24,7 @@ namespace dvize.BulletTime
         public static ConfigEntry<Vector2> DiagonalStayTimeRange;
         public static ConfigEntry<float> MoveSideInertia;
         public static ConfigEntry<Vector3> InertiaLimits;
-        public static ConfigEntry<float>   InertialLimitsStep;
+        public static ConfigEntry<float> InertialLimitsStep;
         public static ConfigEntry<Vector2> SprintSpeedInertiaCurveMin;
         public static ConfigEntry<Vector2> SprintSpeedInertiaCurveMax;
         public static ConfigEntry<Vector2> SprintBrakeInertia;
@@ -35,26 +36,8 @@ namespace dvize.BulletTime
         public static ConfigEntry<Vector2> SideTime;
         public static ConfigEntry<Vector2> InertiaBackwardsCoefficient;
         public static ConfigEntry<float> StrafeInertionCoefficient;
-        public static ConfigEntry<float> DurationPower;
-        public static ConfigEntry<float> PenaltyPower;
-        public static ConfigEntry<float> BaseJumpPenalty;
-        public static ConfigEntry<float> BaseJumpPenaltyDuration;
-        public static ConfigEntry<Vector2> TiltStartSideBackSpeed;
-        public static ConfigEntry<Vector2> TiltMaxSideBackSpeed;
-        public static ConfigEntry<Vector2> TiltAcceleration;
-        public static ConfigEntry<Vector2> InertiaTiltCurveMin;
-        public static ConfigEntry<Vector2> InertiaTiltCurveMax;
-        public static ConfigEntry<Vector2> TiltInertiaMaxSpeed;
-        public static ConfigEntry<Vector2> ExitMovementStateSpeedThreshold;
-        public static ConfigEntry<Vector2> SpeedLimitDurationMin;
-        public static ConfigEntry<Vector2> SpeedLimitDurationMax;
-        public static ConfigEntry<float> MinDirectionBlendTime;
-        public static ConfigEntry<float> SuddenChangesSmoothness;
-        public static ConfigEntry<Vector2> MaxTimeWithoutInput;
-        public static ConfigEntry<Vector2> ProneDirectionAccelerationRange;
-        public static ConfigEntry<Vector2> ProneSpeedAccelerationRange;
-        public static ConfigEntry<Vector2> CrouchSpeedAccelerationRange;
-        public static ConfigEntry<Vector2> WeaponFlipSpeed;
+        public static ConfigEntry<float> intertiaInputMaxSpeed;
+
         public static ConfigEntry<float> tiltSpeed;
         public static ConfigEntry<float> tiltSensitivity;
         public static ConfigEntry<float> tiltchangingspeed;
@@ -73,245 +56,17 @@ namespace dvize.BulletTime
                 true,
                 "");
 
-            baseInertia = Config.Bind(
-                "Main Settings",
-                "Physical:Base Inertia Limits",
-                Vector3.zero,
-                "no default value");
-
-            Inertia = Config.Bind(
-                "Main Settings",
-                "Physical: Inertia",
-                0f,
-                "No default value");
-
-            MoveDiagonalInertia = Config.Bind(
-                "Main Settings",
-                "Physical: Move Diagonal Inertia",
-                0f,
-                "No default value");
-
-            DiagonalTime = Config.Bind(
-                "Inertia Class",
-                "Diagonal Time",
-                Vector2.zero,
-                "Inertia Class - Default Settings: (1.5, 1.5)");
-
-            DiagonalStayTimeRange = Config.Bind(
-                "Inertia Class",
-                "Diagonal Time",
-                Vector2.zero,
-                "Inertia Class - Default Settings: (0.1, 0.2)");
-
-            MoveSideInertia = Config.Bind(
-                "Main Settings",
-                "Physical: Move Side Inertia",
-                0f,
-                "No default value");
-
-            MoveTimeRange = Config.Bind(
-                "Inertia Class",
-                "Move Time Range",
-                Vector2.zero,
-                "Inertia Class - Default Settings: (0.15, 0.5)");
-
-            InertiaLimits = Config.Bind(
-                "Main Settings",
-                "Inertial Limits",
-                Vector3.zero,
-                "Inertia Class - Default Settings: (0, 65, 1)");
-
-            InertialLimitsStep = Config.Bind(
-                "Inertia Class",
-                "Inertial Limits Step",
-                0f,
-                "Inertia Class - Default Settings: 0.3");
-
-            SprintSpeedInertiaCurveMin = Config.Bind(
-                "Inertia Class",
-                "Sprint Speed Inertia Curve Min",
-                Vector2.zero,
-                "Inertia Class - Default Settings: (0, 1)");
-
-            SprintSpeedInertiaCurveMax = Config.Bind(
-                "Inertia Class",
-                "Sprint Speed Inertia Curve Max",
-                Vector2.zero,
-                "Inertia Class - Default Settings: (2.5, 0.3)");
-
-            SprintBrakeInertia = Config.Bind(
-                "Inertia Class",
-                "Sprint Brake Inertia",
-                Vector2.zero,
-                "Inertia Class - Default Settings: (0, 55)");
-
-            SprintTransitionMotionPreservation = Config.Bind(
-                "Inertia Class",
-                "Sprint Transition Motion Preservation",
-                Vector2.zero,
-                "Inertia Class - Default Settings: (0.7, 0.9)");
-
-            SprintAccelerationLimits = Config.Bind(
-                "Inertia Class",
-                "Sprint Acceleration Limits",
-                new Vector2(10f, 1.6f),
-                "Inertia Class - Default Settings: (5, 0.8)");
-
-            PreSprintAccelerationLimits = Config.Bind(
-                "Inertia Class",
-                "PreSprint Acceleration Limits",
-                new Vector2(10f, 1.6f),
-                "Inertia Class - Default Settings: (5, 0.8)");
-
-            WalkInertia = Config.Bind(
-                "Inertia Class",
-                "Walk Inertia",
-                Vector2.zero,
-                "Inertia Class - Default Settings: (0.05f, 0.5f)");
-
-            SpeedInertiaAfterJump = Config.Bind(
-                "Inertia Class",
-                "Speed Inertia After Jump",
-                Vector2.zero,
-                "Inertia Class - Default Settings: (1, 1.4)");
-
-            SideTime = Config.Bind(
-                "Inertia Class",
-                "Side Time",
-                Vector2.zero,
-                "Inertia Class - Default Settings: (2, 2)");
-
-            InertiaBackwardsCoefficient = Config.Bind(
-                "Inertia Class",
-                "Inertia Backwards Coefficent",
-                Vector2.zero,
-                "Inertia Class - Default Settings: (1, 0.8)");
-
             StrafeInertionCoefficient = Config.Bind(
                 "Main Settings",
                 "Strafe Inertion Coeffecient",
-                -5f,
+                0f,
                 "EFT HardSettings - No Default Value");
 
-            DurationPower = Config.Bind(
-                "Inertia Class",
-                "Duration Power",
+            intertiaInputMaxSpeed = Config.Bind(
+                "Main Settings",
+                "Inertia Input Max Speed",
                 0f,
-                "Inertia Class - Default Settings: 1.58");
-
-            PenaltyPower = Config.Bind(
-                "Inertia Class",
-                "Penalty Power",
-                0f,
-                "Inertia Class - Default Settings: 1.12");
-
-            BaseJumpPenalty = Config.Bind(
-                "Inertia Class",
-                "BaseJump Penalty",
-                0f,
-                "Inertia Class - Default Settings: 0.15");
-
-            BaseJumpPenaltyDuration = Config.Bind(
-                "Inertia Class",
-                "BaseJump Penalty",
-                0f,
-                "Inertia Class - Default Settings: 0.3");
-
-            TiltStartSideBackSpeed = Config.Bind(
-                "Inertia Class",
-                "Tilt StartSideBackSpeed",
-                new Vector2(480f, 480f),
-                "Inertia Class - Default Settings: (0.5, 0.2)");
-
-            TiltMaxSideBackSpeed = Config.Bind(
-                "Inertia Class",
-                "Tilt MaxSideBackSpeed",
-                new Vector2(1200f, 1200f),
-                "Inertia Class - Default Settings: (1, 0.7)");
-
-            TiltAcceleration = Config.Bind(
-                "Inertia Class",
-                "Tilt Acceleration",
-                new Vector2(480f, 480f),
-                "Inertia Class - Default Settings: (4.5, 1.5)");
-
-            InertiaTiltCurveMin = Config.Bind(
-                "Inertia Class",
-                "Inertia Tilt CurveMin",
-                Vector2.zero,
-                "Inertia Class - Default Settings: (0, 0.3)");
-
-            InertiaTiltCurveMax = Config.Bind(
-                "Inertia Class",
-                "Inertia Tilt CurveMax",
-                Vector2.zero,
-                "Inertia Class - Default Settings: (1, 0.1)");
-
-            TiltInertiaMaxSpeed = Config.Bind(
-                "Inertia Class",
-                "Tilt Inertia MaxSpeed",
-                Vector2.zero,
-                "Inertia Class - Default Settings: (1.2, 1)");
-
-            ExitMovementStateSpeedThreshold = Config.Bind(
-                "Inertia Class",
-                "Exit MovementStateSpeed Threshold",
-                Vector2.zero,
-                "Inertia Class - Default Settings: (0.02, 0.02");
-
-            SpeedLimitDurationMin = Config.Bind(
-                "Inertia Class",
-                "SpeedLimit Duration Min",
-                Vector2.zero,
-                "Inertia Class - Default Settings: (0.02, 0.02");
-
-            SpeedLimitDurationMax = Config.Bind(
-                "Inertia Class",
-                "SpeedLimit Duration Max",
-                Vector2.zero,
-                "Inertia Class - Default Settings: (0.02, 0.02)");
-
-            MinDirectionBlendTime = Config.Bind(
-                "Inertia Class",
-                "Min Direction BlendTime",
-                0f,
-                "Inertia Class - Default Settings: 0.1");
-
-            SuddenChangesSmoothness = Config.Bind(
-                "Inertia Class",
-                "Sudden Changes Smoothness",
-                0f,
-                "Inertia Class - Default Settings: 3");
-
-            MaxTimeWithoutInput = Config.Bind(
-                "Inertia Class",
-                "Max TimeWithoutInput",
-                Vector2.zero,
-                "Inertia Class - Default Settings: (0.1, 0.3)");
-
-            ProneDirectionAccelerationRange = Config.Bind(
-                "Inertia Class",
-                "Prone DirectionAccelerationRange",
-                 new Vector2(5f, 5f),
-                "Inertia Class - Default Settings: (2.5, 2.5)");
-
-            ProneSpeedAccelerationRange = Config.Bind(
-                "Inertia Class",
-                "Prone SpeedAccelerationRange",
-                new Vector2(5f, 5f),
-                "Inertia Class - Default Settings: (1.2, 1.2)");
-
-            CrouchSpeedAccelerationRange = Config.Bind(
-                "Inertia Class",
-                "CrouchSpeed AccelerationRange",
-                new Vector2(5f, 5f),
-                "Inertia Class - Default Settings: (1.2, 1.2)");
-
-            WeaponFlipSpeed = Config.Bind(
-                "Inertia Class",
-                "Weapon FlipSpeed",
-                new Vector2(2f, 4f),
-                "Inertia Class - Default Settings: (0.5, 2)");
+                "EFT HardSettings - 100f default");
 
             tiltSpeed = Config.Bind(
                 "Final IK",
@@ -348,104 +103,100 @@ namespace dvize.BulletTime
                 "Remove Speed Limit Weight",
                 true,
                 "Default value is off for normal gameplay");
-            
+
             RemoveSpeedLimitSurfaceNormal = Config.Bind(
                 "Limiters",
                 "Remove Speed Limit Surface Normal",
                 true,
                 "Default value is off for normal gameplay");
-            
+
             RemoveSpeedLimitArmor = Config.Bind(
                 "Limiters",
                 "Remove Speed Limit Armor",
                 true,
                 "Default value is off for normal gameplay");
-            
+
             RemoveSpeedLimitAiming = Config.Bind(
                 "Limiters",
                 "Remove Speed Limit Aiming",
                 true,
                 "Default value is off for normal gameplay");
+
+            new inertiaOnWeightUpdatedPatch().Enable();
         }
 
-
+        Player player;
+        BackendConfigSettingsClass.GClass1328 backendsettings;
+        EFTHardSettings settings;
         private void FixedUpdate()
         {
             if (Plugin.PluginEnabled.Value)
             {
-                
-                if (!Singleton<GameWorld>.Instantiated)
-                {
-                    return;
-                }
-
-                if (Camera.main == null)
-                {
-                    return;
-                }
-
-                
                 try
                 {
-                    if (Singleton<GameWorld>.Instance.AllPlayers[0].IsYourPlayer)
+                    if (Singleton<AbstractGame>.Instance.InRaid && Camera.main.transform.position != null)
                     {
-                        var player = Singleton<GameWorld>.Instance.MainPlayer;
+                        /*player = Singleton<GameWorld>.Instance.MainPlayer;
                         player.Physical.Inertia = Plugin.Inertia.Value;
                         player.Physical.MoveDiagonalInertia = Plugin.MoveDiagonalInertia.Value;
                         player.Physical.MoveSideInertia = Plugin.MoveSideInertia.Value;
-                        player.Physical.BaseInertiaLimits = Plugin.baseInertia.Value;
+                        player.Physical.BaseInertiaLimits = Plugin.baseInertia.Value;*/
 
-                        var playeradditional = Singleton<BackendConfigSettingsClass.GClass1325>.Instance;
-                        playeradditional.DurationPower = Plugin.DurationPower.Value;
-                        playeradditional.PenaltyPower = Plugin.PenaltyPower.Value;
-                        playeradditional.BaseJumpPenalty = Plugin.BaseJumpPenalty.Value;
-                        playeradditional.BaseJumpPenaltyDuration = Plugin.BaseJumpPenalty.Value;
-                        playeradditional.InertiaLimits = Plugin.InertiaLimits.Value;
-                        playeradditional.SprintBrakeInertia = Plugin.SprintBrakeInertia.Value;
-                        playeradditional.WalkInertia = Plugin.WalkInertia.Value;
-                        playeradditional.InertiaLimitsStep = Plugin.InertialLimitsStep.Value;
-                        playeradditional.SpeedInertiaAfterJump = Plugin.SpeedInertiaAfterJump.Value;
-                        playeradditional.TiltStartSideBackSpeed = Plugin.TiltStartSideBackSpeed.Value;
-                        playeradditional.TiltMaxSideBackSpeed = Plugin.TiltStartSideBackSpeed.Value;
-                        playeradditional.TiltAcceleration = Plugin.TiltAcceleration.Value;
-                        playeradditional.InertiaTiltCurveMin = Plugin.InertiaTiltCurveMin.Value;
-                        playeradditional.TiltInertiaMaxSpeed = Plugin.TiltInertiaMaxSpeed.Value;
-                        playeradditional.SideTime = Plugin.SideTime.Value;
-                        playeradditional.SprintSpeedInertiaCurveMin = Plugin.SprintSpeedInertiaCurveMin.Value;
-                        playeradditional.SprintSpeedInertiaCurveMax = Plugin.SprintSpeedInertiaCurveMax.Value;
-                        playeradditional.SprintTransitionMotionPreservation = Plugin.SprintTransitionMotionPreservation.Value;
-                        playeradditional.InertiaBackwardCoef = Plugin.InertiaBackwardsCoefficient.Value;
-                        playeradditional.ExitMovementStateSpeedThreshold = Plugin.ExitMovementStateSpeedThreshold.Value;
-                        playeradditional.SpeedLimitDurationMin = Plugin.SpeedLimitDurationMin.Value;
-                        playeradditional.SpeedLimitDurationMax = Plugin.SpeedLimitDurationMax.Value;
-                        playeradditional.SprintTransitionMotionPreservation = Plugin.SprintTransitionMotionPreservation.Value;
-                        playeradditional.SprintAccelerationLimits = Plugin.SprintAccelerationLimits.Value;
-                        playeradditional.PreSprintAccelerationLimits = Plugin.PreSprintAccelerationLimits.Value;
-                        playeradditional.DiagonalTime = Plugin.DiagonalTime.Value;
-                        playeradditional.MinDirectionBlendTime = Plugin.MinDirectionBlendTime.Value;
-                        playeradditional.MoveTimeRange = Plugin.MoveTimeRange.Value;
-                        playeradditional.SuddenChangesSmoothness = Plugin.SuddenChangesSmoothness.Value;
-                        playeradditional.MaxTimeWithoutInput = Plugin.MaxTimeWithoutInput.Value;
-                        playeradditional.ProneDirectionAccelerationRange = Plugin.ProneDirectionAccelerationRange.Value;
-                        playeradditional.ProneSpeedAccelerationRange = Plugin.ProneSpeedAccelerationRange.Value;
-                        playeradditional.DiagonalStayTimeRange = Plugin.DiagonalStayTimeRange.Value;
-                        playeradditional.CrouchSpeedAccelerationRange = Plugin.CrouchSpeedAccelerationRange.Value;
-                        playeradditional.WeaponFlipSpeed = Plugin.WeaponFlipSpeed.Value;
+                        // Retrieve the value of the field for the EFTHardSettings.efthardSettings_0 object
+                        /*settings = Singleton<EFTHardSettings>.Instance;
 
-                        EFTHardSettings settings = Singleton<EFTHardSettings>.Instance;
                         settings.StrafeInertionCoefficient = Plugin.StrafeInertionCoefficient.Value;
+                        settings.InertiaInputMaxSpeed = Plugin.intertiaInputMaxSpeed.Value;
                         settings.TILT_CHANGING_SPEED = Plugin.tiltchangingspeed.Value;
-                        settings.StrafeInertionCurve = null;
+                        settings.StrafeInertionCurve.Evaluate(0f);
+                        settings.InertiaTiltCurve.Evaluate(0f);
+                        settings.PoseInertiaDamp.Evaluate(0f);
+                        settings.PoseInertiaOverFallDistance.Evaluate(0f);*/
 
-
-        RootMotion.FinalIK.Inertia inertiaIK = Singleton<Inertia>.Instance;
-                        RootMotion.FinalIK.BodyTilt bodytilt = Singleton<BodyTilt>.Instance;
+                        //backend configs
                         
+                        /*backendsettings = Singleton<BackendConfigSettingsClass>.Instance.Inertia;
+
+                        backendsettings.ExitMovementStateSpeedThreshold = Vector2.zero;
+                        backendsettings.WalkInertia = Vector2.zero;
+                        backendsettings.FallThreshold = 0.0f;
+                        backendsettings.SpeedLimitAfterFallMin = Vector2.zero;
+                        backendsettings.SpeedLimitAfterFallMax = Vector2.zero;
+                        backendsettings.SpeedLimitDurationMin = Vector2.zero;
+                        backendsettings.SpeedLimitDurationMax = Vector2.zero;
+                        backendsettings.SpeedInertiaAfterJump = Vector2.zero;
+                        backendsettings.BaseJumpPenaltyDuration = 0.0f;
+                        backendsettings.DurationPower = 0.0f;
+                        backendsettings.BaseJumpPenalty = 0.0f;
+                        backendsettings.PenaltyPower = 0.0f;
+                        backendsettings.InertiaTiltCurveMin = Vector2.zero;
+                        backendsettings.InertiaTiltCurveMax = Vector2.zero;
+                        backendsettings.InertiaBackwardCoef = Vector2.zero;
+                        backendsettings.TiltInertiaMaxSpeed = Vector2.zero;
+                        backendsettings.TiltStartSideBackSpeed = Vector2.zero;
+                        backendsettings.TiltMaxSideBackSpeed = Vector2.zero;
+                        backendsettings.TiltAcceleration = Vector2.zero;
+                        backendsettings.AverageRotationFrameSpan = 0;
+                        backendsettings.SprintSpeedInertiaCurveMin = Vector2.zero;
+                        backendsettings.SprintSpeedInertiaCurveMax = Vector2.zero;
+                        backendsettings.SprintBrakeInertia = Vector2.zero;
+                        backendsettings.SprintTransitionMotionPreservation = Vector2.zero;
+                        backendsettings.InertiaLimits = Vector3.zero;
+                        backendsettings.WeaponFlipSpeed = Vector2.zero;
+                        backendsettings.InertiaLimitsStep = 0.0f;
+                        backendsettings.SprintAccelerationLimits = Vector2.zero;
+                        backendsettings.PreSprintAccelerationLimits = Vector2.zero;
+                        backendsettings.SideTime = Vector2.zero;*/
+
+                        //Rootmotion
+                        /*RootMotion.FinalIK.Inertia inertiaIK = Singleton<Inertia>.Instance;
+                        RootMotion.FinalIK.BodyTilt bodytilt = Singleton<BodyTilt>.Instance;
+
 
                         bodytilt.tiltSpeed = Plugin.tiltSpeed.Value;
                         bodytilt.tiltSensitivity = Plugin.tiltSensitivity.Value;
 
-                        
+
                         foreach (Inertia.Body body in inertiaIK.bodies)
                         {
                             body.transform.position = new Vector3(0f, 0f, 0f);
@@ -456,7 +207,9 @@ namespace dvize.BulletTime
                             {
                                 effectorlink.weight = Plugin.effectorlinkweight.Value;
                             }
-                        }
+                        }*/
+
+
 
                         if (Plugin.RemoveSpeedLimitWeight.Value)
                         {
@@ -478,27 +231,58 @@ namespace dvize.BulletTime
                             player.RemoveStateSpeedLimit(Player.ESpeedLimit.Aiming);
                         }
 
-                        //player.RemoveStateSpeedLimit(Player.ESpeedLimit.Weight);
-                        //player.RemoveStateSpeedLimit(Player.ESpeedLimit.Swamp);
-                        //player.RemoveStateSpeedLimit(Player.ESpeedLimit.SurfaceNormal);
-                        //player.RemoveStateSpeedLimit(Player.ESpeedLimit.Shot);
-                        //player.RemoveStateSpeedLimit(Player.ESpeedLimit.HealthCondition);
-                        //player.RemoveStateSpeedLimit(Player.ESpeedLimit.Fall);
-                        //player.RemoveStateSpeedLimit(Player.ESpeedLimit.BarbedWire);
-                        //player.RemoveStateSpeedLimit(Player.ESpeedLimit.Armor);
-                        //player.RemoveStateSpeedLimit(Player.ESpeedLimit.Aiming);
-
                     }
+
+
                 }
                 catch
                 {
-                    return;
+
                 }
-                
-                
+
+
             }
 
         }
 
     }
+
+
+    public class inertiaOnWeightUpdatedPatch : ModulePatch
+    {
+        protected override MethodBase GetTargetMethod()
+        {
+            try
+            {
+                //this isn't a general method.. looks like this engrained in every bot so i have to find the specific bot.
+                return typeof(GClass703).GetMethod("OnWeightUpdated", BindingFlags.Instance | BindingFlags.Public);
+            }
+            catch
+            {
+                Logger.LogInfo("FUInertia: Failed to get target method");
+            }
+
+            return null;
+        }
+
+        [PatchPostfix]
+        public static void Postfix(GClass703 __instance)
+        {
+            BackendConfigSettingsClass.GClass1328 inertia = Singleton<BackendConfigSettingsClass>.Instance.Inertia;
+            __instance.Inertia = 0f;
+            inertia.MinMovementAccelerationRangeRight = new Vector2(0f, 0f);
+            inertia.MaxMovementAccelerationRangeRight = new Vector2(0f, 0f);
+            EFTHardSettings.Instance.MovementAccelerationRange.MoveKey(1, new Keyframe(0f, 1f));
+            inertia.SideTime = new Vector2(0f, 0f);
+            inertia.DiagonalTime = new Vector2 (0f, 0f);
+
+            __instance.MoveSideInertia = 0f;
+            __instance.MoveDiagonalInertia = 0f;
+            __instance.MinStepSound.SetDirty();
+            __instance.TransitionSpeed.SetDirty();
+            typeof(GClass703).GetMethod("method_3", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(__instance, null);
+            typeof(GClass703).GetMethod("method_7", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(__instance, new object[] { 0f });
+        }
+    }
+
 }
