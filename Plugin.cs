@@ -154,7 +154,7 @@ namespace dvize.FUInertia
                         settings.PoseInertiaOverFallDistance.Evaluate(0f);*/
 
                         //backend configs
-                        
+
                         /*backendsettings = Singleton<BackendConfigSettingsClass>.Instance.Inertia;
 
                         backendsettings.ExitMovementStateSpeedThreshold = Vector2.zero;
@@ -189,7 +189,7 @@ namespace dvize.FUInertia
                         backendsettings.SideTime = Vector2.zero;*/
 
                         //Rootmotion
-                        /*RootMotion.FinalIK.Inertia inertiaIK = Singleton<Inertia>.Instance;
+                        RootMotion.FinalIK.Inertia inertiaIK = Singleton<Inertia>.Instance;
                         RootMotion.FinalIK.BodyTilt bodytilt = Singleton<BodyTilt>.Instance;
 
 
@@ -207,7 +207,7 @@ namespace dvize.FUInertia
                             {
                                 effectorlink.weight = Plugin.effectorlinkweight.Value;
                             }
-                        }*/
+                        }
 
 
 
