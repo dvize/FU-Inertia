@@ -7,77 +7,31 @@ using EFT;
 using HarmonyLib;
 using RootMotion.FinalIK;
 using UnityEngine;
-
+using System;
 
 namespace dvize.FUInertia
 {
-    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "1.9.2")]
+    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "2.0.0")]
 
     public class Plugin : BaseUnityPlugin
     {
-        public static ConfigEntry<bool> PluginEnabled;
-        public static ConfigEntry<Vector3> baseInertia;
-        public static ConfigEntry<float> Inertia;
-        public static ConfigEntry<float> MoveDiagonalInertia;
-        public static ConfigEntry<Vector2> MoveTimeRange;
-        public static ConfigEntry<Vector2> DiagonalTime;
-        public static ConfigEntry<Vector2> DiagonalStayTimeRange;
-        public static ConfigEntry<float> MoveSideInertia;
-        public static ConfigEntry<Vector3> InertiaLimits;
-        public static ConfigEntry<float> InertialLimitsStep;
-        public static ConfigEntry<Vector2> SprintSpeedInertiaCurveMin;
-        public static ConfigEntry<Vector2> SprintSpeedInertiaCurveMax;
-        public static ConfigEntry<Vector2> SprintBrakeInertia;
-        public static ConfigEntry<Vector2> SprintTransitionMotionPreservation;
-        public static ConfigEntry<Vector2> SprintAccelerationLimits;
-        public static ConfigEntry<Vector2> PreSprintAccelerationLimits;
-        public static ConfigEntry<Vector2> WalkInertia;
-        public static ConfigEntry<Vector2> SpeedInertiaAfterJump;
-        public static ConfigEntry<Vector2> SideTime;
-        public static ConfigEntry<Vector2> InertiaBackwardsCoefficient;
-        public static ConfigEntry<float> StrafeInertionCoefficient;
-        public static ConfigEntry<float> intertiaInputMaxSpeed;
-
         public static ConfigEntry<float> tiltSpeed;
         public static ConfigEntry<float> tiltSensitivity;
-        public static ConfigEntry<float> tiltchangingspeed;
         public static ConfigEntry<float> bodygravity;
         public static ConfigEntry<float> effectorlinkweight;
-        public static ConfigEntry<bool> RemoveSpeedLimitWeight;
-        public static ConfigEntry<bool> RemoveSpeedLimitSurfaceNormal;
-        public static ConfigEntry<bool> RemoveSpeedLimitArmor;
-        public static ConfigEntry<bool> RemoveSpeedLimitAiming;
 
         void Awake()
         {
-            PluginEnabled = Config.Bind(
-                "Main Settings",
-                "Plugin on/off",
-                true,
-                "");
-
-            StrafeInertionCoefficient = Config.Bind(
-                "Main Settings",
-                "Strafe Inertion Coeffecient",
-                0f,
-                "EFT HardSettings - No Default Value");
-
-            intertiaInputMaxSpeed = Config.Bind(
-                "Main Settings",
-                "Inertia Input Max Speed",
-                0f,
-                "EFT HardSettings - 100f default");
-
             tiltSpeed = Config.Bind(
-                "Final IK",
-                "tilt Speed (peek)",
-                1200f,
-                "FinalIK - Default Settings: 6");
+               "Final IK",
+               "tilt Speed (peek)",
+               1000f,
+               "FinalIK - Default Settings: 6");
 
             tiltSensitivity = Config.Bind(
                 "Final IK",
                 "tilt Sensitivity (peek)",
-                1000f,
+                10f,
                 "FinalIK - Default Settings: 0.07");
 
             bodygravity = Config.Bind(
@@ -86,162 +40,59 @@ namespace dvize.FUInertia
                 0f,
                 "FinalIK - Default Settings: None");
 
-            effectorlinkweight = Config.Bind(
-                "Final IK",
-                "Effector Link Weight (Weight of using this effector)",
-                0f,
-                "FinalIK - Default Settings: None");
-
-            tiltchangingspeed = Config.Bind(
-                "Main Settings",
-                "tilt changingspeed",
-                1000f,
-                "FinalIK - Default Settings: 10");
-
-            RemoveSpeedLimitWeight = Config.Bind(
-                "Limiters",
-                "Remove Speed Limit Weight",
-                true,
-                "Default value is off for normal gameplay");
-
-            RemoveSpeedLimitSurfaceNormal = Config.Bind(
-                "Limiters",
-                "Remove Speed Limit Surface Normal",
-                true,
-                "Default value is off for normal gameplay");
-
-            RemoveSpeedLimitArmor = Config.Bind(
-                "Limiters",
-                "Remove Speed Limit Armor",
-                true,
-                "Default value is off for normal gameplay");
-
-            RemoveSpeedLimitAiming = Config.Bind(
-                "Limiters",
-                "Remove Speed Limit Aiming",
-                true,
-                "Default value is off for normal gameplay");
 
             new inertiaOnWeightUpdatedPatch().Enable();
+            new SprintAccelerationPatch().Enable();
+            new ManualAnimatorPatch1SideStep().Enable();
+            new FinalIKPatchBodyTilt().Enable();
+            new FinalIKPatch().Enable();
+            new UpdateWeightLimitsPatch().Enable();                                 
         }
 
         Player player;
-        BackendConfigSettingsClass.GClass1328 backendsettings;
-        EFTHardSettings settings;
-        private void FixedUpdate()
+        RootMotion.FinalIK.Inertia inertiaIK;
+        RootMotion.FinalIK.BodyTilt bodytilt;
+        private void Update()
         {
-            if (Plugin.PluginEnabled.Value)
+            try
             {
-                try
+                if (Singleton<AbstractGame>.Instance.InRaid && Camera.main.transform.position != null)
                 {
-                    if (Singleton<AbstractGame>.Instance.InRaid && Camera.main.transform.position != null)
+                    if (player == null)
                     {
-                        /*player = Singleton<GameWorld>.Instance.MainPlayer;
-                        player.Physical.Inertia = Plugin.Inertia.Value;
-                        player.Physical.MoveDiagonalInertia = Plugin.MoveDiagonalInertia.Value;
-                        player.Physical.MoveSideInertia = Plugin.MoveSideInertia.Value;
-                        player.Physical.BaseInertiaLimits = Plugin.baseInertia.Value;*/
+                        player = Singleton<GameWorld>.Instance.MainPlayer;
+                    }
 
-                        // Retrieve the value of the field for the EFTHardSettings.efthardSettings_0 object
-                        /*settings = Singleton<EFTHardSettings>.Instance;
+                    if (inertiaIK == null)
+                    {
+                        inertiaIK = Singleton<Inertia>.Instance;
+                    }
 
-                        settings.StrafeInertionCoefficient = Plugin.StrafeInertionCoefficient.Value;
-                        settings.InertiaInputMaxSpeed = Plugin.intertiaInputMaxSpeed.Value;
-                        settings.TILT_CHANGING_SPEED = Plugin.tiltchangingspeed.Value;
-                        settings.StrafeInertionCurve.Evaluate(0f);
-                        settings.InertiaTiltCurve.Evaluate(0f);
-                        settings.PoseInertiaDamp.Evaluate(0f);
-                        settings.PoseInertiaOverFallDistance.Evaluate(0f);*/
+                    if (bodytilt == null)
+                    {
+                        bodytilt = Singleton<BodyTilt>.Instance;
+                    }
 
-                        //backend configs
+                    bodytilt.tiltSpeed = Plugin.tiltSpeed.Value;
+                    bodytilt.tiltSensitivity = Plugin.tiltSensitivity.Value;
 
-                        /*backendsettings = Singleton<BackendConfigSettingsClass>.Instance.Inertia;
+                    foreach (Inertia.Body body in inertiaIK.bodies)
+                    {
+                        body.transform.position = Vector3.zero;
+                        body.transform.localPosition = Vector3.zero;
+                        body.gravity = Plugin.bodygravity.Value;
 
-                        backendsettings.ExitMovementStateSpeedThreshold = Vector2.zero;
-                        backendsettings.WalkInertia = Vector2.zero;
-                        backendsettings.FallThreshold = 0.0f;
-                        backendsettings.SpeedLimitAfterFallMin = Vector2.zero;
-                        backendsettings.SpeedLimitAfterFallMax = Vector2.zero;
-                        backendsettings.SpeedLimitDurationMin = Vector2.zero;
-                        backendsettings.SpeedLimitDurationMax = Vector2.zero;
-                        backendsettings.SpeedInertiaAfterJump = Vector2.zero;
-                        backendsettings.BaseJumpPenaltyDuration = 0.0f;
-                        backendsettings.DurationPower = 0.0f;
-                        backendsettings.BaseJumpPenalty = 0.0f;
-                        backendsettings.PenaltyPower = 0.0f;
-                        backendsettings.InertiaTiltCurveMin = Vector2.zero;
-                        backendsettings.InertiaTiltCurveMax = Vector2.zero;
-                        backendsettings.InertiaBackwardCoef = Vector2.zero;
-                        backendsettings.TiltInertiaMaxSpeed = Vector2.zero;
-                        backendsettings.TiltStartSideBackSpeed = Vector2.zero;
-                        backendsettings.TiltMaxSideBackSpeed = Vector2.zero;
-                        backendsettings.TiltAcceleration = Vector2.zero;
-                        backendsettings.AverageRotationFrameSpan = 0;
-                        backendsettings.SprintSpeedInertiaCurveMin = Vector2.zero;
-                        backendsettings.SprintSpeedInertiaCurveMax = Vector2.zero;
-                        backendsettings.SprintBrakeInertia = Vector2.zero;
-                        backendsettings.SprintTransitionMotionPreservation = Vector2.zero;
-                        backendsettings.InertiaLimits = Vector3.zero;
-                        backendsettings.WeaponFlipSpeed = Vector2.zero;
-                        backendsettings.InertiaLimitsStep = 0.0f;
-                        backendsettings.SprintAccelerationLimits = Vector2.zero;
-                        backendsettings.PreSprintAccelerationLimits = Vector2.zero;
-                        backendsettings.SideTime = Vector2.zero;*/
-
-                        //Rootmotion
-                        RootMotion.FinalIK.Inertia inertiaIK = Singleton<Inertia>.Instance;
-                        RootMotion.FinalIK.BodyTilt bodytilt = Singleton<BodyTilt>.Instance;
-
-
-                        bodytilt.tiltSpeed = Plugin.tiltSpeed.Value;
-                        bodytilt.tiltSensitivity = Plugin.tiltSensitivity.Value;
-
-
-                        foreach (Inertia.Body body in inertiaIK.bodies)
+                        foreach (Inertia.Body.EffectorLink effectorlink in body.effectorLinks)
                         {
-                            body.transform.position = new Vector3(0f, 0f, 0f);
-                            body.transform.localPosition = new Vector3(0f, 0f, 0f);
-                            body.gravity = Plugin.bodygravity.Value;
-
-                            foreach (Inertia.Body.EffectorLink effectorlink in body.effectorLinks)
-                            {
-                                effectorlink.weight = Plugin.effectorlinkweight.Value;
-                            }
+                            effectorlink.weight = Plugin.effectorlinkweight.Value;
                         }
-
-
-
-                        if (Plugin.RemoveSpeedLimitWeight.Value)
-                        {
-                            player.RemoveStateSpeedLimit(Player.ESpeedLimit.Weight);
-                        }
-
-                        if (Plugin.RemoveSpeedLimitSurfaceNormal.Value)
-                        {
-                            player.RemoveStateSpeedLimit(Player.ESpeedLimit.SurfaceNormal);
-                        }
-
-                        if (Plugin.RemoveSpeedLimitArmor.Value)
-                        {
-                            player.RemoveStateSpeedLimit(Player.ESpeedLimit.Armor);
-                        }
-
-                        if (Plugin.RemoveSpeedLimitAiming.Value)
-                        {
-                            player.RemoveStateSpeedLimit(Player.ESpeedLimit.Aiming);
-                        }
-
                     }
 
 
                 }
-                catch
-                {
-
-                }
-
-
             }
+            catch { }
+
 
         }
 
@@ -252,21 +103,11 @@ namespace dvize.FUInertia
     {
         protected override MethodBase GetTargetMethod()
         {
-            try
-            {
-                //this isn't a general method.. looks like this engrained in every bot so i have to find the specific bot.
-                return typeof(GClass703).GetMethod("OnWeightUpdated", BindingFlags.Instance | BindingFlags.Public);
-            }
-            catch
-            {
-                Logger.LogInfo("FUInertia: Failed to get target method");
-            }
-
-            return null;
+            return AccessTools.Method(typeof(GClass703), "OnWeightUpdated");
         }
 
-        [PatchPostfix]
-        public static void Postfix(GClass703 __instance)
+        [PatchPrefix]
+        private static bool Prefix(GClass703 __instance)
         {
             BackendConfigSettingsClass.GClass1328 inertia = Singleton<BackendConfigSettingsClass>.Instance.Inertia;
             __instance.Inertia = 0f;
@@ -282,7 +123,187 @@ namespace dvize.FUInertia
             __instance.TransitionSpeed.SetDirty();
             typeof(GClass703).GetMethod("method_3", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(__instance, null);
             typeof(GClass703).GetMethod("method_7", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(__instance, new object[] { 0f });
+
+            return false;
         }
     }
+
+    public class UpdateWeightLimitsPatch : ModulePatch
+    {
+        protected override MethodBase GetTargetMethod()
+        {
+            return AccessTools.Method(typeof(GClass703), "UpdateWeightLimits");
+        }
+
+        [PatchPostfix]
+        static void Postfix(GClass703 __instance)
+        {
+
+            // Set the Vector2 variables to zero
+            __instance.BaseInertiaLimits = Vector2.zero;
+            __instance.WalkOverweightLimits = Vector2.zero;
+            __instance.BaseOverweightLimits = Vector2.zero;
+            __instance.SprintOverweightLimits = Vector2.zero;
+            __instance.WalkSpeedOverweightLimits = Vector2.zero;
+
+        }
+    }
+
+    public class SprintAccelerationPatch : ModulePatch
+    {
+        protected override MethodBase GetTargetMethod()
+        {
+            return AccessTools.Method(typeof(GClass1604), "SprintAcceleration");
+        }
+
+        [PatchPrefix]
+        private static bool Prefix(GClass1604 __instance, float deltaTime)
+        {
+            try
+            {
+                var player0 = AccessTools.Field(typeof(GClass1604), "player_0").GetValue(__instance) as Player;
+                bool inRaid = Singleton<AbstractGame>.Instance.InRaid;
+
+                if (player0.IsYourPlayer && inRaid)
+                {
+                    var sprintAcceleration = player0.Physical.SprintAcceleration;
+
+                    float num = sprintAcceleration * deltaTime;
+                    float num2 = (player0.Physical.SprintSpeed * __instance.SprintingSpeed + 1f) * __instance.StateSprintSpeedLimit;
+                    __instance.SprintSpeed = Mathf.Clamp(__instance.SprintSpeed + num * Mathf.Sign(num2 - __instance.SprintSpeed), 0.01f, num2);
+
+                }
+                else
+                {
+                    return true;
+                }
+            }
+            catch (System.Exception e)
+            {
+                Logger.LogError(e);
+            }
+
+            // return false to skip the original method
+            return false;
+        }
+    }
+
+    public class ManualAnimatorPatch1SideStep : ModulePatch
+    {
+        protected override MethodBase GetTargetMethod()
+        {
+            return AccessTools.Method(typeof(GClass1619), "ManualAnimatorMoveUpdate");
+        }
+
+        [PatchPostfix]
+        static void Postfix(GClass1619 __instance, float deltaTime)
+        {
+            var movementContext = AccessTools.Field(typeof(GClass1619), "MovementContext").GetValue(__instance) as GClass1604;
+           /* var float_3 = (float)AccessTools.Field(typeof(GClass1619), "float_3").GetValue(__instance);
+            var float_2 = (float)AccessTools.Field(typeof(GClass1619), "float_2").GetValue(__instance);
+            var float_1 = (float)AccessTools.Field(typeof(GClass1619), "float_1").GetValue(__instance);
+*/
+            switch (__instance.Type)
+            {
+                case EStateType.None:
+                    //movementContext.SetSidestep(float_3);
+                    movementContext.SetSidestep(0f);
+                    break;
+                case EStateType.In:
+                    //movementContext.SetSidestep(float_2 + (float_3 - float_2) * (float_1 / __instance.StateLength));
+                    movementContext.SetSidestep(0f);
+                    break;
+                case EStateType.Out:
+                    //movementContext.SetSidestep(float_3 + (float_2 - float_3) * (float_1 / __instance.StateLength));
+                    movementContext.SetSidestep(0f);
+                    break;
+            }
+        }
+    }
+
+    public class FinalIKPatch : ModulePatch
+    {
+        static FieldInfo firstUpdateField = AccessTools.Field(typeof(Inertia.Body), "firstUpdate");
+        static FieldInfo directionField = AccessTools.Field(typeof(Inertia.Body), "direction");
+        static FieldInfo lazyPointField = AccessTools.Field(typeof(Inertia.Body), "lazyPoint");
+        static FieldInfo deltaField = AccessTools.Field(typeof(Inertia.Body), "delta");
+        static FieldInfo lastPositionField = AccessTools.Field(typeof(Inertia.Body), "lastPosition");
+        protected override MethodBase GetTargetMethod()
+        {
+            return AccessTools.Method(typeof(RootMotion.FinalIK.Inertia.Body), "Update");
+        }
+
+        [PatchPrefix]
+        static bool Prefix(Inertia.Body __instance, IKSolverFullBodyBiped solver, float weight, float deltaTime)
+        {
+            if (__instance.transform == null)
+            {
+                return false;
+            }
+
+            // Reset firstUpdate to false
+            firstUpdateField.SetValue(__instance, false);
+
+            // Set direction to instantaneous movement
+            directionField.SetValue(__instance, (__instance.transform.position - (Vector3)lazyPointField.GetValue(__instance)) / deltaTime);
+
+            // Set lazyPoint to current position
+            lazyPointField.SetValue(__instance, __instance.transform.position);
+
+            // Set delta and lastPosition to zero
+            deltaField.SetValue(__instance, Vector3.zero);
+            lastPositionField.SetValue(__instance, Vector3.zero);
+
+            foreach (Inertia.Body.EffectorLink effectorLink in __instance.effectorLinks)
+            {
+                solver.GetEffector(effectorLink.effector).positionOffset += ((Vector3)lazyPointField.GetValue(__instance) - __instance.transform.position) * effectorLink.weight * weight;
+            }
+            return false;
+        }
+    }
+
+    public class FinalIKPatchBodyTilt : ModulePatch
+    {
+        static FieldInfo lastForwardField = AccessTools.Field(typeof(BodyTilt), "lastForward");
+        static FieldInfo tiltAngleField = AccessTools.Field(typeof(BodyTilt), "tiltAngle");
+        static FieldInfo ikField = AccessTools.Field(typeof(BodyTilt), "ik");
+
+        protected override MethodBase GetTargetMethod()
+        {
+            return AccessTools.Method(typeof(RootMotion.FinalIK.BodyTilt), "OnModifyOffset");
+        }
+
+        [PatchPostfix]
+        static void Postfix(BodyTilt __instance)
+        {
+            var tiltAngle = (float)tiltAngleField.GetValue(__instance);
+            var ik = (FullBodyBipedIK)ikField.GetValue(__instance);
+
+            Quaternion quaternion = Quaternion.FromToRotation((Vector3)lastForwardField.GetValue(__instance), __instance.transform.forward);
+            float num = 0f;
+            Vector3 zero = Vector3.zero;
+            quaternion.ToAngleAxis(out num, out zero);
+            if (zero.y > 0f)
+            {
+                num = -num;
+            }
+            num *= __instance.tiltSensitivity * 0.01f;
+            num /= Time.deltaTime;
+            num = Mathf.Clamp(num, -1f, 1f);
+            tiltAngleField.SetValue(__instance, num);
+            float num2 = Mathf.Abs(tiltAngle) / 1f;
+            if (tiltAngle < 0f)
+            {
+                __instance.poseRight.Apply(ik.solver, num2);
+            }
+            else
+            {
+                __instance.poseLeft.Apply(ik.solver, num2);
+            }
+            lastForwardField.SetValue(__instance, __instance.transform.forward);
+        }
+    }
+
+    
 
 }
