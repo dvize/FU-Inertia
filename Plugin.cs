@@ -10,10 +10,11 @@ using UnityEngine;
 using System;
 using VersionChecker;
 using System.Diagnostics;
+using EFT.UI;
 
 namespace dvize.FUInertia
 {
-    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "2.0.0")]
+    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "2.0.1")]
 
     public class Plugin : BaseUnityPlugin
     {
@@ -125,6 +126,13 @@ namespace dvize.FUInertia
         [PatchPrefix]
         private static bool Prefix(GClass703 __instance)
         {
+            Player player = Singleton<GameWorld>.Instance.MainPlayer;
+            var GClass2417_0 = AccessTools.Field(typeof(Player), "GClass2417_0").GetValue(player);
+            var Inventory = AccessTools.Field(typeof(InventoryClass), "Inventory").GetValue(GClass2417_0);
+            var TotalWeightEliteSkill = AccessTools.Field(typeof(GClass777<float>), "TotalWeightEliteSkill").GetValue(Inventory);
+            var TotalWeight = AccessTools.Field(typeof(GClass777<float>), "TotalWeight").GetValue(Inventory);
+
+            float num = (float)(player.Skills.StrengthBuffElite ? TotalWeightEliteSkill : TotalWeight);
             BackendConfigSettingsClass.GClass1328 inertia = Singleton<BackendConfigSettingsClass>.Instance.Inertia;
             __instance.Inertia = 0f;
             inertia.MinMovementAccelerationRangeRight = new Vector2(0f, 0f);
@@ -133,12 +141,21 @@ namespace dvize.FUInertia
             inertia.SideTime = new Vector2(0f, 0f);
             inertia.DiagonalTime = new Vector2 (0f, 0f);
 
+            __instance.Overweight = __instance.BaseOverweightLimits.InverseLerp(num);
+            __instance.WalkOverweight = __instance.WalkOverweightLimits.InverseLerp(num);
+            __instance.FallDamageMultiplier = Mathf.Lerp(1f, __instance.StaminaParameters.FallDamageMultiplier, __instance.Overweight);
+            __instance.SoundRadius = __instance.StaminaParameters.SoundRadius.Evaluate(__instance.Overweight);
+
             __instance.MoveSideInertia = 0f;
             __instance.MoveDiagonalInertia = 0f;
             __instance.MinStepSound.SetDirty();
             __instance.TransitionSpeed.SetDirty();
+
+            //player speed when leg damaged .  it multiplies by gclass703_0.Overweight
             typeof(GClass703).GetMethod("method_3", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(__instance, null);
-            typeof(GClass703).GetMethod("method_7", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(__instance, new object[] { 0f });
+
+
+            typeof(GClass703).GetMethod("method_7", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(__instance, new object[] { num });
 
             return false;
         }
@@ -155,12 +172,12 @@ namespace dvize.FUInertia
         static void Postfix(GClass703 __instance)
         {
 
-            // Set the Vector2 variables to zero
+            // Set the Vector2 variables to zero. Something here causes strength to raise properly
             __instance.BaseInertiaLimits = Vector2.zero;
-            __instance.WalkOverweightLimits = Vector2.zero;
-            __instance.BaseOverweightLimits = Vector2.zero;
-            __instance.SprintOverweightLimits = Vector2.zero;
-            __instance.WalkSpeedOverweightLimits = Vector2.zero;
+            //__instance.WalkOverweightLimits = Vector2.zero;
+            //__instance.BaseOverweightLimits = Vector2.zero;
+            //__instance.SprintOverweightLimits = Vector2.zero;
+            //__instance.WalkSpeedOverweightLimits = Vector2.zero;
 
         }
     }
