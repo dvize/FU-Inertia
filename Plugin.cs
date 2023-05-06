@@ -25,6 +25,8 @@ namespace dvize.FUInertia
 
         void Awake()
         {
+            CheckEftVersion();
+
             tiltSpeed = Config.Bind(
                "Final IK",
                "tilt Speed (peek)",
@@ -43,7 +45,7 @@ namespace dvize.FUInertia
                 0f,
                 "FinalIK - Default Settings: None");
 
-            CheckEftVersion();
+            
 
             new inertiaOnWeightUpdatedPatch().Enable();
             new SprintAccelerationPatch().Enable();
