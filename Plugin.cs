@@ -14,7 +14,7 @@ using EFT.UI;
 
 namespace dvize.FUInertia
 {
-    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "2.0.1")]
+    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "2.0.2")]
 
     public class Plugin : BaseUnityPlugin
     {
