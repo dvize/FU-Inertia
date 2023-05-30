@@ -14,7 +14,7 @@ using EFT.UI;
 
 namespace dvize.FUInertia
 {
-    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "2.0.2")]
+    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "2.0.3")]
 
     public class Plugin : BaseUnityPlugin
     {
@@ -45,11 +45,10 @@ namespace dvize.FUInertia
                 0f,
                 "FinalIK - Default Settings: None");
 
-            
-
             new inertiaOnWeightUpdatedPatch().Enable();
             new SprintAccelerationPatch().Enable();
             new ManualAnimatorPatch1SideStep().Enable();
+            new ManualAnimatorPatchIntertia().Enable();
             new FinalIKPatchBodyTilt().Enable();
             new FinalIKPatch().Enable();
             new UpdateWeightLimitsPatch().Enable();                                 
@@ -135,7 +134,7 @@ namespace dvize.FUInertia
             var TotalWeight = AccessTools.Field(typeof(GClass777<float>), "TotalWeight").GetValue(Inventory);
 
             float num = (float)(player.Skills.StrengthBuffElite ? TotalWeightEliteSkill : TotalWeight);
-            BackendConfigSettingsClass.GClass1328 inertia = Singleton<BackendConfigSettingsClass>.Instance.Inertia;
+            BackendConfigSettingsClass.GClass1327 inertia = Singleton<BackendConfigSettingsClass>.Instance.Inertia;
             __instance.Inertia = 0f;
             inertia.MinMovementAccelerationRangeRight = new Vector2(0f, 0f);
             inertia.MaxMovementAccelerationRangeRight = new Vector2(0f, 0f);
@@ -227,13 +226,13 @@ namespace dvize.FUInertia
     {
         protected override MethodBase GetTargetMethod()
         {
-            return AccessTools.Method(typeof(GClass1619), "ManualAnimatorMoveUpdate");
+            return AccessTools.Method(typeof(GClass1618), "ManualAnimatorMoveUpdate");
         }
 
         [PatchPostfix]
-        static void Postfix(GClass1619 __instance, float deltaTime)
+        static void Postfix(GClass1618 __instance, float deltaTime)
         {
-            var movementContext = AccessTools.Field(typeof(GClass1619), "MovementContext").GetValue(__instance) as GClass1604;
+            var movementContext = AccessTools.Field(typeof(GClass1618), "MovementContext").GetValue(__instance) as GClass1604;
            /* var float_3 = (float)AccessTools.Field(typeof(GClass1619), "float_3").GetValue(__instance);
             var float_2 = (float)AccessTools.Field(typeof(GClass1619), "float_2").GetValue(__instance);
             var float_1 = (float)AccessTools.Field(typeof(GClass1619), "float_1").GetValue(__instance);
@@ -252,6 +251,45 @@ namespace dvize.FUInertia
                     //movementContext.SetSidestep(float_3 + (float_2 - float_3) * (float_1 / __instance.StateLength));
                     movementContext.SetSidestep(0f);
                     break;
+            }
+        }
+    }
+
+    public class ManualAnimatorPatchIntertia : ModulePatch
+    {
+        protected override MethodBase GetTargetMethod()
+        {
+            return AccessTools.Method(typeof(GClass1630), "ManualAnimatorMoveUpdate");
+        }
+
+        [PatchPostfix]
+        static void Postfix(GClass1630 __instance, float deltaTime)
+        {
+            var float_1 = (float)AccessTools.Field(typeof(GClass1630), "float_1").GetValue(__instance);
+            var float_2 = (float)AccessTools.Field(typeof(GClass1630), "float_2").GetValue(__instance);
+            var bool_0 = (bool)AccessTools.Field(typeof(GClass1630), "bool_0").GetValue(__instance);
+            var vector2_0 = (Vector2)AccessTools.Field(typeof(GClass1630), "vector2_0").GetValue(__instance);
+            var MovementContext = AccessTools.Field(typeof(GClass1630), "MovementContext").GetValue(__instance) as GClass1604;
+
+            if (float_1 > float_2)
+            {
+                bool_0 = true;
+            }
+            if (vector2_0.IsZero())
+            {
+                float_1 += deltaTime;
+
+                //remove the smoothed character movement speed cap
+                /*if (MovementContext.SmoothedCharacterMovementSpeed > 0.35f)
+                {
+                    MovementContext.SmoothedCharacterMovementSpeed = Mathf.Lerp(MovementContext.SmoothedCharacterMovementSpeed, 0.35f, Singleton<BackendConfigSettingsClass>.Instance.Inertia.SuddenChangesSmoothness * deltaTime);
+                }*/
+            }
+
+            AccessTools.Method(typeof(GClass1630), "ProcessRotation").Invoke(__instance, new object[] { deltaTime });
+            if (!bool_0)
+            {
+                AccessTools.Method(typeof(GClass1630), "ProcessAnimatorMovement").Invoke(__instance, new object[] { deltaTime });
             }
         }
     }
