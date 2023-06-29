@@ -1,5 +1,7 @@
-﻿using Aki.Reflection.Patching;
+﻿using System;
+using System.Diagnostics;
 using System.Reflection;
+using Aki.Reflection.Patching;
 using BepInEx;
 using BepInEx.Configuration;
 using Comfort.Common;
@@ -7,14 +9,11 @@ using EFT;
 using HarmonyLib;
 using RootMotion.FinalIK;
 using UnityEngine;
-using System;
 using VersionChecker;
-using System.Diagnostics;
-using EFT.UI;
 
 namespace dvize.FUInertia
 {
-    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "2.0.4")]
+    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "2.0.5")]
 
     public class Plugin : BaseUnityPlugin
     {
@@ -47,11 +46,10 @@ namespace dvize.FUInertia
 
             new inertiaOnWeightUpdatedPatch().Enable();
             new SprintAccelerationPatch().Enable();
-            new ManualAnimatorPatch1SideStep().Enable();
             new ManualAnimatorPatchIntertia().Enable();
             new FinalIKPatchBodyTilt().Enable();
             new FinalIKPatch().Enable();
-            new UpdateWeightLimitsPatch().Enable();                                 
+            new UpdateWeightLimitsPatch().Enable();
         }
 
         Player player;
@@ -140,7 +138,7 @@ namespace dvize.FUInertia
             inertia.MaxMovementAccelerationRangeRight = new Vector2(0f, 0f);
             EFTHardSettings.Instance.MovementAccelerationRange.MoveKey(1, new Keyframe(0f, 1f));
             inertia.SideTime = new Vector2(0f, 0f);
-            inertia.DiagonalTime = new Vector2 (0f, 0f);
+            inertia.DiagonalTime = new Vector2(0f, 0f);
 
             __instance.Overweight = __instance.BaseOverweightLimits.InverseLerp(num);
             __instance.WalkOverweight = __instance.WalkOverweightLimits.InverseLerp(num);
@@ -187,15 +185,15 @@ namespace dvize.FUInertia
     {
         protected override MethodBase GetTargetMethod()
         {
-            return AccessTools.Method(typeof(GClass1604), "SprintAcceleration");
+            return AccessTools.Method(typeof(GClass1603), "SprintAcceleration");
         }
 
         [PatchPrefix]
-        private static bool Prefix(GClass1604 __instance, float deltaTime)
+        private static bool Prefix(GClass1603 __instance, float deltaTime)
         {
             try
             {
-                var player0 = AccessTools.Field(typeof(GClass1604), "player_0").GetValue(__instance) as Player;
+                var player0 = AccessTools.Field(typeof(GClass1603), "player_0").GetValue(__instance) as Player;
                 bool inRaid = Singleton<AbstractGame>.Instance.InRaid;
 
                 if (player0.IsYourPlayer && inRaid)
@@ -219,39 +217,6 @@ namespace dvize.FUInertia
 
             // return false to skip the original method
             return false;
-        }
-    }
-
-    public class ManualAnimatorPatch1SideStep : ModulePatch
-    {
-        protected override MethodBase GetTargetMethod()
-        {
-            return AccessTools.Method(typeof(GClass1618), "ManualAnimatorMoveUpdate");
-        }
-
-        [PatchPostfix]
-        static void Postfix(GClass1618 __instance, float deltaTime)
-        {
-            var movementContext = AccessTools.Field(typeof(GClass1618), "MovementContext").GetValue(__instance) as GClass1604;
-           /* var float_3 = (float)AccessTools.Field(typeof(GClass1619), "float_3").GetValue(__instance);
-            var float_2 = (float)AccessTools.Field(typeof(GClass1619), "float_2").GetValue(__instance);
-            var float_1 = (float)AccessTools.Field(typeof(GClass1619), "float_1").GetValue(__instance);
-*/
-            switch (__instance.Type)
-            {
-                case EStateType.None:
-                    //movementContext.SetSidestep(float_3);
-                    movementContext.SetSidestep(0f);
-                    break;
-                case EStateType.In:
-                    //movementContext.SetSidestep(float_2 + (float_3 - float_2) * (float_1 / __instance.StateLength));
-                    movementContext.SetSidestep(0f);
-                    break;
-                case EStateType.Out:
-                    //movementContext.SetSidestep(float_3 + (float_2 - float_3) * (float_1 / __instance.StateLength));
-                    movementContext.SetSidestep(0f);
-                    break;
-            }
         }
     }
 
@@ -377,6 +342,6 @@ namespace dvize.FUInertia
         }
     }
 
-    
+
 
 }
