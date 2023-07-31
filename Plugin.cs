@@ -13,8 +13,8 @@ using VersionChecker;
 
 namespace dvize.FUInertia
 {
-    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "2.0.5")]
-
+    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "2.1.0")]
+    [BepInDependency("com.spt-aki.core", "3.6.0")]
     public class Plugin : BaseUnityPlugin
     {
         public static ConfigEntry<float> tiltSpeed;
@@ -46,9 +46,9 @@ namespace dvize.FUInertia
 
             new inertiaOnWeightUpdatedPatch().Enable();
             new SprintAccelerationPatch().Enable();
-            new ManualAnimatorPatchIntertia().Enable();
-            new FinalIKPatchBodyTilt().Enable();
-            new FinalIKPatch().Enable();
+            new ManualAnimatorPatchInertia().Enable();
+            //new FinalIKPatchBodyTilt().Enable();
+            //new FinalIKPatch().Enable();
             new UpdateWeightLimitsPatch().Enable();
         }
 
@@ -119,42 +119,44 @@ namespace dvize.FUInertia
     {
         protected override MethodBase GetTargetMethod()
         {
-            return AccessTools.Method(typeof(GClass703), "OnWeightUpdated");
+            return AccessTools.Method(typeof(GClass713), "OnWeightUpdated");
         }
 
         [PatchPrefix]
-        private static bool Prefix(GClass703 __instance)
+        private static bool Prefix(GClass713 __instance, bool ___bool_7)
         {
             Player player = Singleton<GameWorld>.Instance.MainPlayer;
-            var GClass2417_0 = AccessTools.Field(typeof(Player), "GClass2417_0").GetValue(player);
-            var Inventory = AccessTools.Field(typeof(InventoryClass), "Inventory").GetValue(GClass2417_0);
-            var TotalWeightEliteSkill = AccessTools.Field(typeof(GClass777<float>), "TotalWeightEliteSkill").GetValue(Inventory);
-            var TotalWeight = AccessTools.Field(typeof(GClass777<float>), "TotalWeight").GetValue(Inventory);
+            if (!___bool_7 && player.InteractablePlayer.IsYourPlayer)
+            {
+                BackendConfigSettingsClass.GClass1367 stamina = Singleton<BackendConfigSettingsClass>.Instance.Stamina;
+                float num = player.InteractablePlayer.Skills.CarryingWeightRelativeModifier * player.InteractablePlayer.HealthController.CarryingWeightRelativeModifier;
+                Vector2 vector = new Vector2(player.InteractablePlayer.HealthController.CarryingWeightAbsoluteModifier, player.InteractablePlayer.HealthController.CarryingWeightAbsoluteModifier);
 
-            float num = (float)(player.Skills.StrengthBuffElite ? TotalWeightEliteSkill : TotalWeight);
-            BackendConfigSettingsClass.GClass1327 inertia = Singleton<BackendConfigSettingsClass>.Instance.Inertia;
-            __instance.Inertia = 0f;
-            inertia.MinMovementAccelerationRangeRight = new Vector2(0f, 0f);
-            inertia.MaxMovementAccelerationRangeRight = new Vector2(0f, 0f);
-            EFTHardSettings.Instance.MovementAccelerationRange.MoveKey(1, new Keyframe(0f, 1f));
-            inertia.SideTime = new Vector2(0f, 0f);
-            inertia.DiagonalTime = new Vector2(0f, 0f);
+                //inertia crap
+                BackendConfigSettingsClass.GClass1371 inertia = Singleton<BackendConfigSettingsClass>.Instance.Inertia;
+                inertia.SideTime = Vector2.zero;
+                inertia.DiagonalTime = Vector2.zero;
+                inertia.MinMovementAccelerationRangeRight = new Vector2(0f, 0f);
+                inertia.MaxMovementAccelerationRangeRight = new Vector2(0f, 0f);
+                inertia.AverageRotationFrameSpan = 1;
+                inertia.SuddenChangesSmoothness = 0f;
 
-            __instance.Overweight = __instance.BaseOverweightLimits.InverseLerp(num);
-            __instance.WalkOverweight = __instance.WalkOverweightLimits.InverseLerp(num);
-            __instance.FallDamageMultiplier = Mathf.Lerp(1f, __instance.StaminaParameters.FallDamageMultiplier, __instance.Overweight);
-            __instance.SoundRadius = __instance.StaminaParameters.SoundRadius.Evaluate(__instance.Overweight);
+                __instance.Inertia = 0f;
+                __instance.MoveSideInertia = 0f;
+                __instance.MoveDiagonalInertia = 0f;
 
-            __instance.MoveSideInertia = 0f;
-            __instance.MoveDiagonalInertia = 0f;
-            __instance.MinStepSound.SetDirty();
-            __instance.TransitionSpeed.SetDirty();
-
-            //player speed when leg damaged .  it multiplies by gclass703_0.Overweight
-            typeof(GClass703).GetMethod("method_3", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(__instance, null);
-
-
-            typeof(GClass703).GetMethod("method_7", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(__instance, new object[] { num });
+                //Vector3 vector2 = new Vector3(inertia.InertiaLimitsStep * (float)player.InteractablePlayer.Skills.Strength.SummaryLevel, inertia.InertiaLimitsStep * (float)player.InteractablePlayer.Skills.Strength.SummaryLevel, 0f);
+                __instance.BaseInertiaLimits = Vector3.zero;
+                __instance.WalkOverweightLimits = stamina.WalkOverweightLimits * num + vector;
+                __instance.BaseOverweightLimits = stamina.BaseOverweightLimits * num + vector;
+                __instance.SprintOverweightLimits = stamina.SprintOverweightLimits * num + vector;
+                __instance.WalkSpeedOverweightLimits = stamina.WalkSpeedOverweightLimits * num + vector;
+                return false;
+            }
+            __instance.WalkOverweightLimits.Set(9000f, 10000f);
+            __instance.BaseOverweightLimits.Set(9000f, 10000f);
+            __instance.SprintOverweightLimits.Set(9000f, 10000f);
+            __instance.WalkSpeedOverweightLimits.Set(9000f, 10000f);
 
             return false;
         }
@@ -164,20 +166,14 @@ namespace dvize.FUInertia
     {
         protected override MethodBase GetTargetMethod()
         {
-            return AccessTools.Method(typeof(GClass703), "UpdateWeightLimits");
+            return AccessTools.Method(typeof(GClass713), "UpdateWeightLimits");
         }
 
         [PatchPostfix]
-        static void Postfix(GClass703 __instance)
+        static void Postfix(GClass713 __instance)
         {
-
             // Set the Vector2 variables to zero. Something here causes strength to raise properly
-            __instance.BaseInertiaLimits = Vector2.zero;
-            //__instance.WalkOverweightLimits = Vector2.zero;
-            //__instance.BaseOverweightLimits = Vector2.zero;
-            //__instance.SprintOverweightLimits = Vector2.zero;
-            //__instance.WalkSpeedOverweightLimits = Vector2.zero;
-
+            __instance.BaseInertiaLimits = Vector3.zero;
         }
     }
 
@@ -185,34 +181,30 @@ namespace dvize.FUInertia
     {
         protected override MethodBase GetTargetMethod()
         {
-            return AccessTools.Method(typeof(GClass1603), "SprintAcceleration");
+            return AccessTools.Method(typeof(GClass1667), "SprintAcceleration");
         }
 
         [PatchPrefix]
-        private static bool Prefix(GClass1603 __instance, float deltaTime)
+        private static bool Prefix(GClass1667 __instance, float deltaTime, Player ___player_0, GClass765 ___gclass765_0)
         {
-            try
+
+            bool inRaid = Singleton<AbstractGame>.Instance.InRaid;
+
+            if (___player_0.IsYourPlayer && inRaid)
             {
-                var player0 = AccessTools.Field(typeof(GClass1603), "player_0").GetValue(__instance) as Player;
-                bool inRaid = Singleton<AbstractGame>.Instance.InRaid;
+                var sprintAcceleration = ___player_0.Physical.SprintAcceleration;
 
-                if (player0.IsYourPlayer && inRaid)
-                {
-                    var sprintAcceleration = player0.Physical.SprintAcceleration;
+                float num = sprintAcceleration * deltaTime;
+                float num2 = (___player_0.Physical.SprintSpeed * __instance.SprintingSpeed + 1f) * __instance.StateSprintSpeedLimit;
 
-                    float num = sprintAcceleration * deltaTime;
-                    float num2 = (player0.Physical.SprintSpeed * __instance.SprintingSpeed + 1f) * __instance.StateSprintSpeedLimit;
-                    __instance.SprintSpeed = Mathf.Clamp(__instance.SprintSpeed + num * Mathf.Sign(num2 - __instance.SprintSpeed), 0.01f, num2);
+                float num3 = 1f;
 
-                }
-                else
-                {
-                    return true;
-                }
-            }
-            catch (System.Exception e)
-            {
-                Logger.LogError(e);
+                num2 = Mathf.Clamp(num2 * num3, 0.1f, num2);
+
+                __instance.SprintSpeed = Mathf.Clamp(__instance.SprintSpeed + num * Mathf.Sign(num2 - __instance.SprintSpeed), 0.01f, num2);
+
+                return false;
+
             }
 
             // return false to skip the original method
@@ -220,21 +212,21 @@ namespace dvize.FUInertia
         }
     }
 
-    public class ManualAnimatorPatchIntertia : ModulePatch
+    public class ManualAnimatorPatchInertia : ModulePatch
     {
         protected override MethodBase GetTargetMethod()
         {
-            return AccessTools.Method(typeof(GClass1630), "ManualAnimatorMoveUpdate");
+            return AccessTools.Method(typeof(GClass1681), "ManualAnimatorMoveUpdate");
         }
 
         [PatchPostfix]
-        static void Postfix(GClass1630 __instance, float deltaTime)
+        static void Postfix(GClass1681 __instance, float deltaTime)
         {
-            var float_1 = (float)AccessTools.Field(typeof(GClass1630), "float_1").GetValue(__instance);
-            var float_2 = (float)AccessTools.Field(typeof(GClass1630), "float_2").GetValue(__instance);
-            var bool_0 = (bool)AccessTools.Field(typeof(GClass1630), "bool_0").GetValue(__instance);
-            var vector2_0 = (Vector2)AccessTools.Field(typeof(GClass1630), "vector2_0").GetValue(__instance);
-            var MovementContext = AccessTools.Field(typeof(GClass1630), "MovementContext").GetValue(__instance) as GClass1604;
+            var float_1 = (float)AccessTools.Field(typeof(GClass1681), "float_1").GetValue(__instance);
+            var float_2 = (float)AccessTools.Field(typeof(GClass1681), "float_2").GetValue(__instance);
+            var bool_0 = (bool)AccessTools.Field(typeof(GClass1681), "bool_0").GetValue(__instance);
+            var vector2_0 = (Vector2)AccessTools.Field(typeof(GClass1681), "vector2_0").GetValue(__instance);
+            var MovementContext = AccessTools.Field(typeof(GClass1681), "MovementContext").GetValue(__instance) as GClass1664;
 
             if (float_1 > float_2)
             {
@@ -251,10 +243,10 @@ namespace dvize.FUInertia
                 }*/
             }
 
-            AccessTools.Method(typeof(GClass1630), "ProcessRotation").Invoke(__instance, new object[] { deltaTime });
+            AccessTools.Method(typeof(GClass1681), "ProcessRotation").Invoke(__instance, new object[] { deltaTime });
             if (!bool_0)
             {
-                AccessTools.Method(typeof(GClass1630), "ProcessAnimatorMovement").Invoke(__instance, new object[] { deltaTime });
+                AccessTools.Method(typeof(GClass1681), "ProcessAnimatorMovement").Invoke(__instance, new object[] { deltaTime });
             }
         }
     }
@@ -300,48 +292,7 @@ namespace dvize.FUInertia
         }
     }
 
-    public class FinalIKPatchBodyTilt : ModulePatch
-    {
-        static FieldInfo lastForwardField = AccessTools.Field(typeof(BodyTilt), "lastForward");
-        static FieldInfo tiltAngleField = AccessTools.Field(typeof(BodyTilt), "tiltAngle");
-        static FieldInfo ikField = AccessTools.Field(typeof(BodyTilt), "ik");
-
-        protected override MethodBase GetTargetMethod()
-        {
-            return AccessTools.Method(typeof(RootMotion.FinalIK.BodyTilt), "OnModifyOffset");
-        }
-
-        [PatchPostfix]
-        static void Postfix(BodyTilt __instance)
-        {
-            var tiltAngle = (float)tiltAngleField.GetValue(__instance);
-            var ik = (FullBodyBipedIK)ikField.GetValue(__instance);
-
-            Quaternion quaternion = Quaternion.FromToRotation((Vector3)lastForwardField.GetValue(__instance), __instance.transform.forward);
-            float num = 0f;
-            Vector3 zero = Vector3.zero;
-            quaternion.ToAngleAxis(out num, out zero);
-            if (zero.y > 0f)
-            {
-                num = -num;
-            }
-            num *= __instance.tiltSensitivity * 0.01f;
-            num /= Time.deltaTime;
-            num = Mathf.Clamp(num, -1f, 1f);
-            tiltAngleField.SetValue(__instance, num);
-            float num2 = Mathf.Abs(tiltAngle) / 1f;
-            if (tiltAngle < 0f)
-            {
-                __instance.poseRight.Apply(ik.solver, num2);
-            }
-            else
-            {
-                __instance.poseLeft.Apply(ik.solver, num2);
-            }
-            lastForwardField.SetValue(__instance, __instance.transform.forward);
-        }
-    }
-
+    
 
 
 }
