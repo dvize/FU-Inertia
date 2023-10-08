@@ -67,9 +67,7 @@ namespace dvize.FUInertia
             new inertiaOnWeightUpdatedPatch().Enable();
             new SprintAccelerationPatch().Enable();
             new AnimatorTransitionSpeedPatch().Enable();
-            //new GClass1577Inertia().Enable();
             new UpdateWeightLimitsPatch().Enable();
-            new GClass1574SmoothedCharacterMotion().Enable();
 
         }
 
@@ -156,9 +154,9 @@ namespace dvize.FUInertia
             Player player = Singleton<GameWorld>.Instance.MainPlayer;
             if (player.InteractablePlayer.IsYourPlayer)
             {
-                //use reflection to grab GClass2553_0 from instance player.InteractablePlayer
-                FieldInfo invenControllerField = player.InteractablePlayer.GetType().GetField("GClass2553_0", BindingFlags.NonPublic | BindingFlags.Instance);
-                InventoryControllerClass inventoryController = (InventoryControllerClass)invenControllerField.GetValue(player.InteractablePlayer);
+                //use reflection to grab protected InventoryControllerClass _inventoryController from Player
+                FieldInfo inventoryControllerField = AccessTools.Field(typeof(Player), "_inventoryController");
+                InventoryControllerClass inventoryController = (InventoryControllerClass)inventoryControllerField.GetValue(player);
 
                 //switch total weight from actual calc since interactable observer is locked down and too lazy
                 
@@ -187,8 +185,8 @@ namespace dvize.FUInertia
                 __instance.TransitionSpeed.SetDirty();
 
                 //invoke method_3 and method_7 using reflection
-                MethodInfo method_3 = AccessTools.Method(AccessTools.TypeByName("GClass599"), "method_3");
-                MethodInfo method_7 = AccessTools.Method(AccessTools.TypeByName("GClass599"), "method_7");
+                MethodInfo method_3 = AccessTools.Method(AccessTools.TypeByName("GClass602"), "method_3");
+                MethodInfo method_7 = AccessTools.Method(AccessTools.TypeByName("GClass602"), "method_7");
 
                 method_3.Invoke(__instance, null);
                 method_7.Invoke(__instance, new object[] { totalWeight });
@@ -281,79 +279,6 @@ namespace dvize.FUInertia
         }
     }
 
-    public class GClass1577Inertia : ModulePatch
-    {
-        protected override MethodBase GetTargetMethod()
-        {
-            return AccessTools.Method(typeof(GClass1577), "method_1");
-        }
-
-        [PatchPostfix]
-        static void Postfix(GClass1577 __instance, ref float deltaTime, MovementContext ___MovementContext, Vector2 ___vector2_7, float ___float_7, float ___float_9,
-            float ___float_1, float ___float_2, bool ___bool_2, float ___float_5)
-        {
-            bool flag = !__instance.Direction.y.IsZero();
-            bool flag2 = !__instance.Direction.x.IsZero();
-            float num;
-
-            num = 1f;
-
-            ___vector2_7 = (__instance.Direction.IsZero() ? ___vector2_7 : __instance.Direction);
-
-            //use accesstools to invoke private method_5
-            AccessTools.Method(typeof(GClass1577), "method_5").Invoke(__instance, null);
-
-            float num2 = 1f;
-            Vector2 vector = __instance.Direction.normalized * ___float_7 * ___float_9 * num2;
-            ___float_1 = 1f;
-
-            //this.method_2(deltaTime, num3);
-            if (__instance.Direction.IsZero())
-            {
-                ___float_2 = 0f;
-            }
-           
-            if (___bool_2)
-            {
-                ___float_5 = 0f;
-            }
-
-            ___bool_2 = false;
-            
-            __instance.Direction = Vector2.zero;
-            
-        }
-        
-    }
-
-
-    public class GClass1574SmoothedCharacterMotion : ModulePatch
-    {
-        protected override MethodBase GetTargetMethod()
-        {
-            return AccessTools.Method(typeof(GClass1574), "ManualAnimatorMoveUpdate");
-        }
-
-        [PatchPrefix]
-        static void Prefix(GClass1574 __instance, ref float deltaTime, float ___float_1, float ___float_2, bool ___bool_0)
-        {
-            if (___float_1 > ___float_2)
-            {
-                ___bool_0 = true;
-            }
-
-            //invoke ProcessRotation from __instance with accesstools since its private
-            AccessTools.Method(typeof(GClass1574), "ProcessRotation").Invoke(__instance, new object[] { deltaTime });
-
-            if (!___bool_0)
-            {
-                //invoke ProcessAnimatorMovement(deltaTime) from __instance with accesstools since its private
-                AccessTools.Method(typeof(GClass1574), "ProcessAnimatorMovement").Invoke(__instance, new object[] { deltaTime });
-
-            }
-
-        }
-
-    }
+    
 
 }
