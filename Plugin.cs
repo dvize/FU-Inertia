@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using Aki.Reflection.Patching;
@@ -11,18 +12,25 @@ using RootMotion.FinalIK;
 using UnityEngine;
 using VersionChecker;
 
+//use Comfort.Common for Singletons instead of RootMotion
+using Singleton = Comfort.Common;
+
+#pragma warning disable IDE0007
+
 namespace dvize.FUInertia
 {
-    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "2.1.0")]
-    [BepInDependency("com.spt-aki.core", "3.6.0")]
+    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "2.2.0")]
+    [BepInDependency("com.spt-aki.core", "3.7.0")]
     public class Plugin : BaseUnityPlugin
     {
         public static ConfigEntry<float> tiltSpeed;
         public static ConfigEntry<float> tiltSensitivity;
         public static ConfigEntry<float> bodygravity;
         public static ConfigEntry<float> effectorlinkweight;
+        public static ConfigEntry<float> weightCarryingTotalMultiplier;
 
-        void Awake()
+        public static ConfigEntry<float> SetTransitionSpeedFloat;
+        private void Awake()
         {
             CheckEftVersion();
 
@@ -44,12 +52,25 @@ namespace dvize.FUInertia
                 0f,
                 "FinalIK - Default Settings: None");
 
+            weightCarryingTotalMultiplier = Config.Bind(
+                "Weight",
+                "Weight Carry Capacity Multiplier",
+                1f,
+                "Modify from 1 (normal) to multiply the amount of weight you can carry");
+
+            SetTransitionSpeedFloat = Config.Bind(
+                "Inertia",
+                "Set Transition Float Speed",
+                9999f,
+                "Should modify the animator for Transition Between Movements (i hope)");
+
             new inertiaOnWeightUpdatedPatch().Enable();
             new SprintAccelerationPatch().Enable();
-            new ManualAnimatorPatchInertia().Enable();
-            //new FinalIKPatchBodyTilt().Enable();
-            //new FinalIKPatch().Enable();
+            new AnimatorTransitionSpeedPatch().Enable();
+            //new GClass1577Inertia().Enable();
             new UpdateWeightLimitsPatch().Enable();
+            new GClass1574SmoothedCharacterMotion().Enable();
+
         }
 
         Player player;
@@ -91,7 +112,14 @@ namespace dvize.FUInertia
                         }
                     }
 
+                    //sidestep is that manual stepping out and aiming
+                    Singleton<EFTHardSettings>.Instance.IdleStateMotionPreservation = 0.0f;
+                    Singleton<EFTHardSettings>.Instance.DecelerationSpeed = 9999.0f;
+                    Singleton<EFTHardSettings>.Instance.StrafeInertionCoefficient = 0f;
+                    Singleton<EFTHardSettings>.Instance.StrafeInertionCurve = AnimationCurve.Linear(0f, 0f, 1f, 0f);
 
+                    Logger.LogInfo("CurrentAnimatorState: " + player.MovementContext.CurrentState.Name);
+                    Logger.LogInfo("CurrentAnimatorStateIndex: " + player.MovementContext.CurrentAnimatorStateIndex);
                 }
             }
             catch { }
@@ -119,180 +147,213 @@ namespace dvize.FUInertia
     {
         protected override MethodBase GetTargetMethod()
         {
-            return AccessTools.Method(typeof(GClass713), "OnWeightUpdated");
+            return AccessTools.Method(typeof(GClass602), "OnWeightUpdated");
         }
 
         [PatchPrefix]
-        private static bool Prefix(GClass713 __instance, bool ___bool_7)
+        private static bool Prefix(GClass602 __instance, float ___float_3)
         {
             Player player = Singleton<GameWorld>.Instance.MainPlayer;
-            if (!___bool_7 && player.InteractablePlayer.IsYourPlayer)
+            if (player.InteractablePlayer.IsYourPlayer)
             {
-                BackendConfigSettingsClass.GClass1367 stamina = Singleton<BackendConfigSettingsClass>.Instance.Stamina;
-                float num = player.InteractablePlayer.Skills.CarryingWeightRelativeModifier * player.InteractablePlayer.HealthController.CarryingWeightRelativeModifier;
-                Vector2 vector = new Vector2(player.InteractablePlayer.HealthController.CarryingWeightAbsoluteModifier, player.InteractablePlayer.HealthController.CarryingWeightAbsoluteModifier);
+                //use reflection to grab GClass2553_0 from instance player.InteractablePlayer
+                FieldInfo invenControllerField = player.InteractablePlayer.GetType().GetField("GClass2553_0", BindingFlags.NonPublic | BindingFlags.Instance);
+                InventoryControllerClass inventoryController = (InventoryControllerClass)invenControllerField.GetValue(player.InteractablePlayer);
 
-                //inertia crap
-                BackendConfigSettingsClass.GClass1371 inertia = Singleton<BackendConfigSettingsClass>.Instance.Inertia;
-                inertia.SideTime = Vector2.zero;
-                inertia.DiagonalTime = Vector2.zero;
-                inertia.MinMovementAccelerationRangeRight = new Vector2(0f, 0f);
-                inertia.MaxMovementAccelerationRangeRight = new Vector2(0f, 0f);
-                inertia.AverageRotationFrameSpan = 1;
-                inertia.SuddenChangesSmoothness = 0f;
+                //switch total weight from actual calc since interactable observer is locked down and too lazy
+                
+                float totalWeight = (player.InteractablePlayer.Skills.StrengthBuffElite ? (inventoryController.Inventory.TotalWeightEliteSkill * Plugin.weightCarryingTotalMultiplier.Value)
+                    : (inventoryController.Inventory.TotalWeight * Plugin.weightCarryingTotalMultiplier.Value));
 
+                BackendConfigSettingsClass.InertiaSettings inertia = Singleton<BackendConfigSettingsClass>.Instance.Inertia;
+                //__instance.Inertia = __instance.CalculateValue(__instance.BaseInertiaLimits, totalWeight);
                 __instance.Inertia = 0f;
+                __instance.SprintAcceleration = inertia.SprintAccelerationLimits.InverseLerp(__instance.Inertia);
+                __instance.PreSprintAcceleration = inertia.PreSprintAccelerationLimits.Evaluate(__instance.Inertia);
+                float num = Mathf.Lerp(inertia.MinMovementAccelerationRangeRight.x, inertia.MaxMovementAccelerationRangeRight.x, __instance.Inertia);
+                float num2 = Mathf.Lerp(inertia.MinMovementAccelerationRangeRight.y, inertia.MaxMovementAccelerationRangeRight.y, __instance.Inertia);
+                EFTHardSettings.Instance.MovementAccelerationRange.MoveKey(1, new Keyframe(num, num2));
+                __instance.Overweight = __instance.BaseOverweightLimits.InverseLerp(totalWeight);
+                __instance.WalkOverweight = __instance.WalkOverweightLimits.InverseLerp(totalWeight);
+                ___float_3 = __instance.SprintOverweightLimits.InverseLerp(totalWeight);
+                __instance.WalkSpeedLimit = 1f - __instance.WalkSpeedOverweightLimits.InverseLerp(totalWeight);
                 __instance.MoveSideInertia = 0f;
-                __instance.MoveDiagonalInertia = 0f;
+                __instance.MoveDiagonalInertia = inertia.DiagonalTime.Evaluate(__instance.Inertia);
 
-                //Vector3 vector2 = new Vector3(inertia.InertiaLimitsStep * (float)player.InteractablePlayer.Skills.Strength.SummaryLevel, inertia.InertiaLimitsStep * (float)player.InteractablePlayer.Skills.Strength.SummaryLevel, 0f);
-                __instance.BaseInertiaLimits = Vector3.zero;
-                __instance.WalkOverweightLimits = stamina.WalkOverweightLimits * num + vector;
-                __instance.BaseOverweightLimits = stamina.BaseOverweightLimits * num + vector;
-                __instance.SprintOverweightLimits = stamina.SprintOverweightLimits * num + vector;
-                __instance.WalkSpeedOverweightLimits = stamina.WalkSpeedOverweightLimits * num + vector;
+
+                __instance.FallDamageMultiplier = Mathf.Lerp(1f, __instance.StaminaParameters.FallDamageMultiplier, __instance.Overweight);
+                __instance.SoundRadius = __instance.StaminaParameters.SoundRadius.Evaluate(__instance.Overweight);
+                __instance.MinStepSound.SetDirty();
+                __instance.TransitionSpeed.SetDirty();
+
+                //invoke method_3 and method_7 using reflection
+                MethodInfo method_3 = AccessTools.Method(AccessTools.TypeByName("GClass599"), "method_3");
+                MethodInfo method_7 = AccessTools.Method(AccessTools.TypeByName("GClass599"), "method_7");
+
+                method_3.Invoke(__instance, null);
+                method_7.Invoke(__instance, new object[] { totalWeight });
+                
+                /*__instance.method_3();
+                __instance.method_7(totalWeight);*/
+
                 return false;
             }
-            __instance.WalkOverweightLimits.Set(9000f, 10000f);
-            __instance.BaseOverweightLimits.Set(9000f, 10000f);
-            __instance.SprintOverweightLimits.Set(9000f, 10000f);
-            __instance.WalkSpeedOverweightLimits.Set(9000f, 10000f);
 
-            return false;
+            return true;
         }
     }
-
     public class UpdateWeightLimitsPatch : ModulePatch
     {
         protected override MethodBase GetTargetMethod()
         {
-            return AccessTools.Method(typeof(GClass713), "UpdateWeightLimits");
+            return AccessTools.Method(typeof(GClass602), "UpdateWeightLimits");
         }
 
         [PatchPostfix]
-        static void Postfix(GClass713 __instance)
+        static void Postfix(GClass602 __instance)
         {
             // Set the Vector2 variables to zero. Something here causes strength to raise properly
             __instance.BaseInertiaLimits = Vector3.zero;
         }
     }
 
-    public class SprintAccelerationPatch : ModulePatch
+    public class EnableInertPatch : ModulePatch
     {
         protected override MethodBase GetTargetMethod()
         {
-            return AccessTools.Method(typeof(GClass1667), "SprintAcceleration");
+            return AccessTools.Method(typeof(PlayerAnimator), nameof(PlayerAnimator.EnableInert));
         }
 
         [PatchPrefix]
-        private static bool Prefix(GClass1667 __instance, float deltaTime, Player ___player_0, GClass765 ___gclass765_0)
+        static bool Prefix(PlayerAnimator __instance, int ___INERT_PARAM_HASH, int ___INERT_FLOAT_PARAM_HASH)
         {
+            //removed ref bool enabled because always going to seet false
+            __instance.Animator.SetBool(___INERT_PARAM_HASH, false);
+            __instance.Animator.SetFloat(___INERT_FLOAT_PARAM_HASH, 0f);
 
-            bool inRaid = Singleton<AbstractGame>.Instance.InRaid;
-
-            if (___player_0.IsYourPlayer && inRaid)
-            {
-                var sprintAcceleration = ___player_0.Physical.SprintAcceleration;
-
-                float num = sprintAcceleration * deltaTime;
-                float num2 = (___player_0.Physical.SprintSpeed * __instance.SprintingSpeed + 1f) * __instance.StateSprintSpeedLimit;
-
-                float num3 = 1f;
-
-                num2 = Mathf.Clamp(num2 * num3, 0.1f, num2);
-
-                __instance.SprintSpeed = Mathf.Clamp(__instance.SprintSpeed + num * Mathf.Sign(num2 - __instance.SprintSpeed), 0.01f, num2);
-
-                return false;
-
-            }
-
-            // return false to skip the original method
             return false;
         }
     }
-
-    public class ManualAnimatorPatchInertia : ModulePatch
+    public class AnimatorTransitionSpeedPatch : ModulePatch
     {
         protected override MethodBase GetTargetMethod()
         {
-            return AccessTools.Method(typeof(GClass1681), "ManualAnimatorMoveUpdate");
-        }
-
-        [PatchPostfix]
-        static void Postfix(GClass1681 __instance, float deltaTime)
-        {
-            var float_1 = (float)AccessTools.Field(typeof(GClass1681), "float_1").GetValue(__instance);
-            var float_2 = (float)AccessTools.Field(typeof(GClass1681), "float_2").GetValue(__instance);
-            var bool_0 = (bool)AccessTools.Field(typeof(GClass1681), "bool_0").GetValue(__instance);
-            var vector2_0 = (Vector2)AccessTools.Field(typeof(GClass1681), "vector2_0").GetValue(__instance);
-            var MovementContext = AccessTools.Field(typeof(GClass1681), "MovementContext").GetValue(__instance) as GClass1664;
-
-            if (float_1 > float_2)
-            {
-                bool_0 = true;
-            }
-            if (vector2_0.IsZero())
-            {
-                float_1 += deltaTime;
-
-                //remove the smoothed character movement speed cap
-                /*if (MovementContext.SmoothedCharacterMovementSpeed > 0.35f)
-                {
-                    MovementContext.SmoothedCharacterMovementSpeed = Mathf.Lerp(MovementContext.SmoothedCharacterMovementSpeed, 0.35f, Singleton<BackendConfigSettingsClass>.Instance.Inertia.SuddenChangesSmoothness * deltaTime);
-                }*/
-            }
-
-            AccessTools.Method(typeof(GClass1681), "ProcessRotation").Invoke(__instance, new object[] { deltaTime });
-            if (!bool_0)
-            {
-                AccessTools.Method(typeof(GClass1681), "ProcessAnimatorMovement").Invoke(__instance, new object[] { deltaTime });
-            }
-        }
-    }
-
-    public class FinalIKPatch : ModulePatch
-    {
-        static FieldInfo firstUpdateField = AccessTools.Field(typeof(Inertia.Body), "firstUpdate");
-        static FieldInfo directionField = AccessTools.Field(typeof(Inertia.Body), "direction");
-        static FieldInfo lazyPointField = AccessTools.Field(typeof(Inertia.Body), "lazyPoint");
-        static FieldInfo deltaField = AccessTools.Field(typeof(Inertia.Body), "delta");
-        static FieldInfo lastPositionField = AccessTools.Field(typeof(Inertia.Body), "lastPosition");
-        protected override MethodBase GetTargetMethod()
-        {
-            return AccessTools.Method(typeof(RootMotion.FinalIK.Inertia.Body), "Update");
+            return AccessTools.Method(typeof(PlayerAnimator), nameof(PlayerAnimator.SetTransitionSpeed));
         }
 
         [PatchPrefix]
-        static bool Prefix(Inertia.Body __instance, IKSolverFullBodyBiped solver, float weight, float deltaTime)
+        static bool Prefix(PlayerAnimator __instance, ref float speed)
         {
-            if (__instance.transform == null)
-            {
-                return false;
-            }
+            __instance.Animator.SetFloat(PlayerAnimator.TRANSITION_SPEED_HASH, Plugin.SetTransitionSpeedFloat.Value);
 
-            // Reset firstUpdate to false
-            firstUpdateField.SetValue(__instance, false);
-
-            // Set direction to instantaneous movement
-            directionField.SetValue(__instance, (__instance.transform.position - (Vector3)lazyPointField.GetValue(__instance)) / deltaTime);
-
-            // Set lazyPoint to current position
-            lazyPointField.SetValue(__instance, __instance.transform.position);
-
-            // Set delta and lastPosition to zero
-            deltaField.SetValue(__instance, Vector3.zero);
-            lastPositionField.SetValue(__instance, Vector3.zero);
-
-            foreach (Inertia.Body.EffectorLink effectorLink in __instance.effectorLinks)
-            {
-                solver.GetEffector(effectorLink.effector).positionOffset += ((Vector3)lazyPointField.GetValue(__instance) - __instance.transform.position) * effectorLink.weight * weight;
-            }
             return false;
         }
     }
 
     
 
+    public class SprintAccelerationPatch : ModulePatch
+    {
+        protected override MethodBase GetTargetMethod()
+        {
+            return AccessTools.Method(typeof(MovementContext), "SprintAcceleration");
+        }
+
+        [PatchPrefix]
+        private static bool Prefix(MovementContext __instance, float deltaTime, Player ____player, GClass654 ____averageRotationX)
+        {
+
+            bool inRaid = Singleton<AbstractGame>.Instance.InRaid;
+
+            if (____player.IsYourPlayer && inRaid)
+            {
+                float num = ____player.Physical.SprintAcceleration * deltaTime;
+                float num2 = (____player.Physical.SprintSpeed * __instance.SprintingSpeed + 1f) * __instance.StateSprintSpeedLimit;
+                float num3 = Mathf.Max(EFTHardSettings.Instance.sprintSpeedInertiaCurve.Evaluate(Mathf.Abs((float)____averageRotationX.Average)), EFTHardSettings.Instance.sprintSpeedInertiaCurve.Evaluate(2.14748365E+09f) * (2f));
+                num2 = Mathf.Clamp(num2 * num3, 0.1f, num2);
+                __instance.SprintSpeed = Mathf.Clamp(__instance.SprintSpeed + num * Mathf.Sign(num2 - __instance.SprintSpeed), 0.01f, num2);
+
+                return false;
+
+            }
+
+            return true;
+        }
+    }
+
+    public class GClass1577Inertia : ModulePatch
+    {
+        protected override MethodBase GetTargetMethod()
+        {
+            return AccessTools.Method(typeof(GClass1577), "method_1");
+        }
+
+        [PatchPostfix]
+        static void Postfix(GClass1577 __instance, ref float deltaTime, MovementContext ___MovementContext, Vector2 ___vector2_7, float ___float_7, float ___float_9,
+            float ___float_1, float ___float_2, bool ___bool_2, float ___float_5)
+        {
+            bool flag = !__instance.Direction.y.IsZero();
+            bool flag2 = !__instance.Direction.x.IsZero();
+            float num;
+
+            num = 1f;
+
+            ___vector2_7 = (__instance.Direction.IsZero() ? ___vector2_7 : __instance.Direction);
+
+            //use accesstools to invoke private method_5
+            AccessTools.Method(typeof(GClass1577), "method_5").Invoke(__instance, null);
+
+            float num2 = 1f;
+            Vector2 vector = __instance.Direction.normalized * ___float_7 * ___float_9 * num2;
+            ___float_1 = 1f;
+
+            //this.method_2(deltaTime, num3);
+            if (__instance.Direction.IsZero())
+            {
+                ___float_2 = 0f;
+            }
+           
+            if (___bool_2)
+            {
+                ___float_5 = 0f;
+            }
+
+            ___bool_2 = false;
+            
+            __instance.Direction = Vector2.zero;
+            
+        }
+        
+    }
+
+
+    public class GClass1574SmoothedCharacterMotion : ModulePatch
+    {
+        protected override MethodBase GetTargetMethod()
+        {
+            return AccessTools.Method(typeof(GClass1574), "ManualAnimatorMoveUpdate");
+        }
+
+        [PatchPrefix]
+        static void Prefix(GClass1574 __instance, ref float deltaTime, float ___float_1, float ___float_2, bool ___bool_0)
+        {
+            if (___float_1 > ___float_2)
+            {
+                ___bool_0 = true;
+            }
+
+            //invoke ProcessRotation from __instance with accesstools since its private
+            AccessTools.Method(typeof(GClass1574), "ProcessRotation").Invoke(__instance, new object[] { deltaTime });
+
+            if (!___bool_0)
+            {
+                //invoke ProcessAnimatorMovement(deltaTime) from __instance with accesstools since its private
+                AccessTools.Method(typeof(GClass1574), "ProcessAnimatorMovement").Invoke(__instance, new object[] { deltaTime });
+
+            }
+
+        }
+
+    }
 
 }
