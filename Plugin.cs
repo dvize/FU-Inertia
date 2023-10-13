@@ -19,8 +19,8 @@ using Singleton = Comfort.Common;
 
 namespace dvize.FUInertia
 {
-    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "2.2.0")]
-    [BepInDependency("com.spt-aki.core", "3.7.0")]
+    [BepInPlugin("com.dvize.FUInertia", "dvize.FUInertia", "2.2.1")]
+    [BepInDependency("com.spt-aki.core", "3.7.1")]
     public class Plugin : BaseUnityPlugin
     {
         public static ConfigEntry<float> tiltSpeed;
@@ -29,7 +29,6 @@ namespace dvize.FUInertia
         public static ConfigEntry<float> effectorlinkweight;
         public static ConfigEntry<float> weightCarryingTotalMultiplier;
 
-        public static ConfigEntry<float> SetTransitionSpeedFloat;
         private void Awake()
         {
             CheckEftVersion();
@@ -58,15 +57,9 @@ namespace dvize.FUInertia
                 1f,
                 "Modify from 1 (normal) to multiply the amount of weight you can carry");
 
-            SetTransitionSpeedFloat = Config.Bind(
-                "Inertia",
-                "Set Transition Float Speed",
-                9999f,
-                "Should modify the animator for Transition Between Movements (i hope)");
-
             new inertiaOnWeightUpdatedPatch().Enable();
             new SprintAccelerationPatch().Enable();
-            new AnimatorTransitionSpeedPatch().Enable();
+            //new AnimatorTransitionSpeedPatch().Enable();
             new UpdateWeightLimitsPatch().Enable();
 
         }
@@ -232,7 +225,8 @@ namespace dvize.FUInertia
             return false;
         }
     }
-    public class AnimatorTransitionSpeedPatch : ModulePatch
+
+    /*public class AnimatorTransitionSpeedPatch : ModulePatch
     {
         protected override MethodBase GetTargetMethod()
         {
@@ -246,7 +240,7 @@ namespace dvize.FUInertia
 
             return false;
         }
-    }
+    }*/
 
     
 
