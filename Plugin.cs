@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
@@ -138,11 +138,11 @@ namespace dvize.FUInertia
     {
         protected override MethodBase GetTargetMethod()
         {
-            return AccessTools.Method(typeof(GClass602), "OnWeightUpdated");
+            return AccessTools.Method(typeof(GClass681), "OnWeightUpdated");
         }
 
         [PatchPrefix]
-        private static bool Prefix(GClass602 __instance, float ___float_3)
+        private static bool Prefix(GClass681 __instance, float ___float_3)
         {
             Player player = Singleton<GameWorld>.Instance.MainPlayer;
             if (player.InteractablePlayer.IsYourPlayer)
@@ -178,8 +178,8 @@ namespace dvize.FUInertia
                 __instance.TransitionSpeed.SetDirty();
 
                 //invoke method_3 and method_7 using reflection
-                MethodInfo method_3 = AccessTools.Method(AccessTools.TypeByName("GClass602"), "method_3");
-                MethodInfo method_7 = AccessTools.Method(AccessTools.TypeByName("GClass602"), "method_7");
+                MethodInfo method_3 = AccessTools.Method(typeof(GClass681), "method_3");
+                MethodInfo method_7 = AccessTools.Method(typeof(GClass681), "method_7");
 
                 method_3.Invoke(__instance, null);
                 method_7.Invoke(__instance, new object[] { totalWeight });
@@ -197,11 +197,11 @@ namespace dvize.FUInertia
     {
         protected override MethodBase GetTargetMethod()
         {
-            return AccessTools.Method(typeof(GClass602), "UpdateWeightLimits");
+            return AccessTools.Method(typeof(GClass681), "UpdateWeightLimits");
         }
 
         [PatchPostfix]
-        static void Postfix(GClass602 __instance)
+        static void Postfix(GClass681 __instance)
         {
             // Set the Vector2 variables to zero. Something here causes strength to raise properly
             __instance.BaseInertiaLimits = Vector3.zero;
@@ -252,7 +252,7 @@ namespace dvize.FUInertia
         }
 
         [PatchPrefix]
-        private static bool Prefix(MovementContext __instance, float deltaTime, Player ____player, GClass654 ____averageRotationX)
+        private static bool Prefix(MovementContext __instance, float deltaTime, Player ____player, GClass733 ____averageRotationX)
         {
 
             bool inRaid = Singleton<AbstractGame>.Instance.InRaid;
